@@ -1,10 +1,6 @@
 # ESP32 WROOM32 Dual Relay Board with CH1116 Display Configuration
 # This configuration provides dual relay control with CH1116 OLED display
 
-# Libraries for display
-libraries:
-  - "olikraus/U8g2"
-
 # I2C Configuration for OLED Display
 i2c:
   sda: GPIO21

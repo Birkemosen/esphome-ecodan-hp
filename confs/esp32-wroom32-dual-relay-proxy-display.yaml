@@ -1,10 +1,6 @@
 # ESP32 WROOM32 Dual Relay Board with Proxy Support and CH1116 Display
 # This configuration provides dual relay control with proxy UART support and OLED display
 
-# Libraries for display
-libraries:
-  - "olikraus/U8g2"
-
 # I2C Configuration for OLED Display
 i2c:
   sda: GPIO21
