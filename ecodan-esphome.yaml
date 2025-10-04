@@ -2,11 +2,6 @@ substitutions:
   name: ecodan-heatpump
   friendlyName: Ecodan heatpump
 
-# PlatformIO options for external libraries
-platformio_options:
-  lib_deps:
-    - olikraus/U8g2
-
 # enable ota update via http request
 http_request:
   buffer_size_tx: 20248
