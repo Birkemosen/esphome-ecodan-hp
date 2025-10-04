@@ -44,63 +44,71 @@ font:
     id: font_small
     size: 9
 
-# CH1116 OLED Display (130x64 pixels) - Rotated 90 degrees
+# CH1116 OLED Display (130x64 pixels) - Normal orientation
 display:
   - platform: ssd1306_i2c
     id: oled_display
     model: "SH1106 128x64"  # Use SH1106 model as CH1116 is compatible
     address: 0x3C
-    invert: true
-    rotation: 90  # Rotate display 90 degrees
+    invert: false
     update_interval: 2s
     lambda: |-
-      // Rotated display: 64x128 (height x width)
-      // CH1116 is 130x64, rotated becomes 64x130
+      // Normal display: 128x64 (width x height)
+      // CH1116 is 130x64, so we have 2 extra pixels on the right
+      int offset_x = 2;  // Account for CH1116's 2-pixel offset
       it.fill(Color::BLACK);
 
       // --- Header Line ---
-      it.printf(0, 0, id(font_small), "IP: %s", id(wifi_ip).state.c_str());
+      it.printf(0 + offset_x, 0, id(font_small), "IP: %s", id(wifi_ip).state.c_str());
       
       // WiFi Signal (top right)
       int signal_strength = id(wifi_signal_strength).state;
-      int base_x = 58;
-      int base_y = 2;
-      if (signal_strength > -80) it.filled_rectangle(base_x, base_y, 2, 2, Color::WHITE);
-      if (signal_strength > -70) it.filled_rectangle(base_x + 3, base_y, 2, 4, Color::WHITE);
-      if (signal_strength > -60) it.filled_rectangle(base_x + 6, base_y, 2, 6, Color::WHITE);
-      if (signal_strength > -50) it.filled_rectangle(base_x + 9, base_y, 2, 8, Color::WHITE);
+      int base_x = 110;  // X position for WiFi bars
+      int base_y = 8;   // Y base position (bottom of bars)
+      // Bar 1 (Always present)
+      it.filled_rectangle(base_x, base_y - 2, 2, 2, Color::WHITE);
+      // Bar 2 (Fair signal)
+      if (signal_strength > -80) it.filled_rectangle(base_x + 4, base_y - 4, 2, 4, Color::WHITE);
+      // Bar 3 (Good signal)
+      if (signal_strength > -70) it.filled_rectangle(base_x + 8, base_y - 6, 2, 6, Color::WHITE);
+      // Bar 4 (Strong signal)
+      if (signal_strength > -60) it.filled_rectangle(base_x + 12, base_y - 8, 2, 8, Color::WHITE);
 
-      // --- Main Content (Vertical List) ---
-      it.line(0, 10, 64, 10);  // Separator line
+      // --- Grid Line ---
+      it.line(0 + offset_x, 10, 128, 10);  // Horizontal line after ESP info
 
-      // Heat Pump Status
-      it.printf(0, 12, id(font_small), "Heat Pump:");
-      it.printf(0, 22, id(font_medium), "%s", id(hp_mode).state.c_str());
+      // --- Heat Pump Mode Section (Left) ---
+      it.printf(0 + offset_x, 12, id(font_medium), "HP Status");
+      it.printf(0 + offset_x, 26, id(font_medium), "%s", id(hp_mode).state.c_str());
 
-      // Temperature Readings
-      it.printf(0, 32, id(font_small), "Flow: %.1f°C", id(flow_temp_display).state);
-      it.printf(0, 42, id(font_small), "Return: %.1f°C", id(return_temp_display).state);
-      it.printf(0, 52, id(font_small), "DHW: %.1f°C", id(dhw_temp_display).state);
-      it.printf(0, 62, id(font_small), "Outdoor: %.1f°C", id(outdoor_temp_display).state);
-
-      // Smart Grid Status
-      it.printf(0, 72, id(font_small), "Smart Grid:");
+      // --- Smart Grid Mode Section (Left) ---
+      it.line(0, 38, 62, 38);
+      it.line(62, 10, 62, 64);
+      it.printf(0 + offset_x, 40, id(font_medium), "Smart Grid");
       std::string level_text;
       if (id(smart_grid_level).state == 0) level_text = "Normal";
       else if (id(smart_grid_level).state == 1) level_text = "Reduced";
       else if (id(smart_grid_level).state == 2) level_text = "Stop";
       else level_text = "Boost";
-      it.printf(0, 82, id(font_medium), "Level %d: %s", (int) id(smart_grid_level).state, level_text.c_str());
+      it.printf(0 + offset_x, 52, id(font_medium), "%d:%s", (int) id(smart_grid_level).state, level_text.c_str());
 
-      // Relay Status
-      it.printf(0, 92, id(font_small), "Relays: R1=%s R2=%s", 
+      // --- Right Column (All Temperatures) ---
+      it.printf(66, 12, id(font_medium), "Flw:");
+      it.printf(94, 12, id(font_medium), "%.1f°C", id(flow_temp_display).state);
+      it.printf(66, 24, id(font_medium), "Ret:");
+      it.printf(94, 24, id(font_medium), "%.1f°C", id(return_temp_display).state);
+      it.printf(66, 40, id(font_medium), "DHW:");
+      it.printf(94, 40, id(font_medium), "%.1f°C", id(dhw_temp_display).state);
+      it.printf(66, 52, id(font_medium), "Out:");
+      it.printf(94, 52, id(font_medium), "%.1f°C", id(outdoor_temp_display).state);
+
+      // --- Bottom Row (Relay Status & Uptime) ---
+      it.printf(0 + offset_x, 58, id(font_small), "R1:%s R2:%s", 
                 id(relay1).state ? "ON" : "OFF", 
                 id(relay2).state ? "ON" : "OFF");
-
-      // System Info
+      
       int uptime_hours = id(esp_uptime).state / 3600;
-      it.printf(0, 102, id(font_small), "Uptime: %dh", uptime_hours);
-      it.printf(0, 112, id(font_small), "WiFi: %ddBm", signal_strength);
+      it.printf(66, 58, id(font_small), "Uptime: %dh", uptime_hours);
 
 # Text sensors for display
 text_sensor:
