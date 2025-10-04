@@ -136,7 +136,7 @@ sensor:
       id: dhw_temp
       name: "DHW Temperature"
     outdoor_temp:
-      id: outdoor_temp
+      id: outside_temp
       name: "Outdoor Temperature"
 
 # Smart Grid Level Control
