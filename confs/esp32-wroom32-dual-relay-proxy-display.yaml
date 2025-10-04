@@ -160,9 +160,6 @@ text_sensor:
 
 # Sensors for display
 sensor:
-  - platform: uptime
-    name: "ESP Uptime"
-    id: esp_uptime
   - platform: wifi_signal
     name: "WiFi Signal"
     id: wifi_signal_strength
