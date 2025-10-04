@@ -9,6 +9,7 @@ Tested boards
 | M5Stack Atom Lite (ESP32 variants) | https://docs.m5stack.com/en/core/ATOM%20Lite | Grove ports used |
 | M5Stack Atom Lite (ESP32 variants) | https://docs.m5stack.com/en/core/ATOM%20Lite | Pins used [example](confs/m5stack-atom-lite-proxy.md) |
 | M5Stack Atom Lite S3 (ESP32-S3 variants) | https://docs.m5stack.com/en/core/AtomS3%20Lite | Grove ports used |
+| ESP32 WROOM32 Dual Relay Board | Various suppliers | 2x relay outputs (GPIO25/26), optional CH1116 OLED display (I2C), Smart Grid control, proxy support |
 
 Cable
 * Get one of the grove female cable and a ST PAP-05V-S connector. Remove one end of the grove connector (you can lift the clamp a bit and pull out the wire) and replace it with a ST PAP-05V-S connector. Here's an example:
@@ -25,6 +26,35 @@ Pin mapping (image pin layout: from left to right)
 *Note: pin 5 (12v) on the cn105 is not used.*
 
 *Note2: when using 5v from the cn105, **do not** use an external usb power source at the same time*
+
+## ESP32 WROOM32 Dual Relay Board Wiring
+
+### CH1116 Display (Optional)
+| ESP32 Pin | Display Pin | Function |
+|:---|:---|:---|
+| GPIO21 | SDA | I2C Data |
+| GPIO22 | SCL | I2C Clock |
+| 3.3V | VCC | Display Power |
+| GND | GND | Ground |
+
+*Display I2C address: 0x3C*
+
+### CN105 Heat Pump Connection
+Use the same cable as M5Stack boards (Grove to CN105 connector):
+| ESP32 Pin | CN105 Pin | Function |
+|:---|:---|:---|
+| GPIO1 | Pin 1 (Yellow) | Rx |
+| GPIO2 | Pin 2 (White) | Tx |
+| 5V | Pin 3 (Red) | Power |
+| GND | Pin 4 (Black) | Ground |
+
+## Proxy Connection (Optional)
+For proxy mode (Melcloud/Procon integration):
+| ESP32 Pin | Proxy Device | Function |
+|:---|:---|:---|
+| GPIO16 | Proxy Rx | Proxy Receive |
+| GPIO17 | Proxy Tx | Proxy Transmit |
+| GND | Proxy GND | Ground |
 
 # where to buy
 atom s3 lite

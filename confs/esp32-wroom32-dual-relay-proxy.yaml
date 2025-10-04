@@ -1,0 +1,92 @@
+# ESP32 WROOM32 Dual Relay Board with Proxy Support
+# This configuration provides dual relay control with proxy UART support
+
+# UART Configuration for Proxy
+uart:
+  - id: uart_ecodan
+    rx_pin:
+      number: GPIO1
+      mode:
+        input: true
+        pullup: true
+    tx_pin:
+      number: GPIO2
+      mode:
+        output: true
+    baud_rate: 2400
+    parity: EVEN
+    stop_bits: 1
+    debug:
+      direction: BOTH
+      dummy_receiver: false
+      after:
+        delimiter: "\n"
+      sequence:
+        - lambda: UARTDebug::log_hex(direction, bytes, ' ');
+
+  - id: uart_proxy
+    rx_pin:
+      number: GPIO16
+      mode:
+        input: true
+        pullup: true
+    tx_pin:
+      number: GPIO17
+      mode:
+        output: true
+    baud_rate: 9600
+    parity: EVEN
+    stop_bits: 1
+    # debug:
+    #   direction: BOTH
+    #   dummy_receiver: false
+    #   after:
+    #     delimiter: "\n"
+    #   sequence:
+    #     - lambda: UARTDebug::log_hex(direction, bytes, ' ');
+
+# Relay Outputs
+output:
+  - platform: gpio
+    pin: GPIO25
+    id: relay1_output
+  - platform: gpio
+    pin: GPIO26
+    id: relay2_output
+
+# Relay Switches
+switch:
+  - platform: output
+    name: "Relay 1"
+    output: relay1_output
+    id: relay1
+  - platform: output
+    name: "Relay 2"
+    output: relay2_output
+    id: relay2
+
+# Smart Grid Level Control
+number:
+  - platform: template
+    name: "Smart Grid Level"
+    id: smart_grid_level
+    min_value: 0
+    max_value: 3
+    step: 1
+    optimistic: true
+    on_value:
+      - lambda: |-
+          // Control relays based on Smart Grid level
+          if (id(smart_grid_level).state == 0) {
+            id(relay1).turn_off();
+            id(relay2).turn_off();
+          } else if (id(smart_grid_level).state == 1) {
+            id(relay1).turn_on();
+            id(relay2).turn_off();
+          } else if (id(smart_grid_level).state == 2) {
+            id(relay1).turn_off();
+            id(relay2).turn_on();
+          } else if (id(smart_grid_level).state == 3) {
+            id(relay1).turn_on();
+            id(relay2).turn_on();
+          }

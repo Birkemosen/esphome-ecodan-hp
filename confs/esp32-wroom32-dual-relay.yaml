@@ -1,0 +1,48 @@
+# ESP32 WROOM32 Dual Relay Board Configuration
+# This configuration provides dual relay control without display
+
+# Relay Outputs
+output:
+  - platform: gpio
+    pin: GPIO25
+    id: relay1_output
+  - platform: gpio
+    pin: GPIO26
+    id: relay2_output
+
+# Relay Switches
+switch:
+  - platform: output
+    name: "Relay 1"
+    output: relay1_output
+    id: relay1
+  - platform: output
+    name: "Relay 2"
+    output: relay2_output
+    id: relay2
+
+# Smart Grid Level Control
+number:
+  - platform: template
+    name: "Smart Grid Level"
+    id: smart_grid_level
+    min_value: 0
+    max_value: 3
+    step: 1
+    optimistic: true
+    on_value:
+      - lambda: |-
+          // Control relays based on Smart Grid level
+          if (id(smart_grid_level).state == 0) {
+            id(relay1).turn_off();
+            id(relay2).turn_off();
+          } else if (id(smart_grid_level).state == 1) {
+            id(relay1).turn_on();
+            id(relay2).turn_off();
+          } else if (id(smart_grid_level).state == 2) {
+            id(relay1).turn_off();
+            id(relay2).turn_on();
+          } else if (id(smart_grid_level).state == 3) {
+            id(relay1).turn_on();
+            id(relay2).turn_on();
+          }

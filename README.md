@@ -14,6 +14,8 @@ The remote thermostat protocol CNRF is supported by [esphome-ecodan-remote-therm
 | Server Control | Restrict/Allow DHW/Heating/Cooling |
 | Proxy support | Use a Melcloud WiFi adapter or Procon Melcobems unit in combination with the ESP |
 | Realtime metrics | `Power output`, `Consumption`, `Production`, `COP` (no external meter required, FTC6+) |
+| Dual Relay Board | ESP32 WROOM32 dual relay board support with optional CH1116 OLED display |
+| Smart Grid Control | 4-level smart grid control system (0-3) with automatic relay management |
 | Misc* | `Fan speed`, `Compressor starts`, `Outdoor unit thermistors` |
 | Updates | OTA updates available when using the default recommended hardware |
 | Short cycle detection & mitigation | Protects your heat pump from excessive on/off cycling. [Documentation](https://github.com/gekkekoe/esphome-ecodan-hp/blob/main/docs/short-cycle-mitigation.md) |

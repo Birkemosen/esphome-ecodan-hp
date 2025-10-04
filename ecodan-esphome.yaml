@@ -61,8 +61,17 @@ packages:
             confs/short-cycle.yaml,     # recommended
             confs/auto-adaptive.yaml,    # recommended
             confs/request-codes.yaml,   # disable if your unit does not support request codes (service menu)
+            ## Uncomment ONE of the following based on your hardware setup:
             confs/esp32s3.yaml,         # confs/esp32.yaml, for regular board
             #confs/esp32s3-led.yaml,    # atom s3 status leds
+            #confs/esp32s3-proxy.yaml,  # esp32s3 proxy configuration
+            #confs/esp32s3-proxy2.yaml, # esp32s3 proxy configuration variant 2
+            #confs/esp32s3-heishamon.yaml, # esp32s3 heishamon configuration
+            #confs/esp32-wroom32-dual-relay.yaml,                   # Relay board only
+            #confs/esp32-wroom32-dual-relay-ch1116.yaml,            # Relay board with display
+            #confs/esp32-wroom32-dual-relay-proxy.yaml,             # Relay board with proxy
+            #confs/esp32-wroom32-dual-relay-proxy-display.yaml      # Relay board with proxy and display
+            ## zone 1 is always enabled
             confs/zone1.yaml,
             confs/server-control-z1.yaml,
             ## enable if you want to use zone 2
@@ -80,7 +89,8 @@ packages:
             # confs/ecodan-labels-da.yaml,  # Danish
             # confs/ecodan-labels-pl.yaml,  # Polish
             confs/debug.yaml,
-            confs/wifi.yaml
+            confs/wifi.yaml,
+
            ]
 
 # enable logger
