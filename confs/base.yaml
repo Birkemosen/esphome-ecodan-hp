@@ -431,6 +431,7 @@ sensor:
       }
 
   - platform: uptime
+    id: esp_uptime
     name: ${uptime}
     disabled_by_default: false
     force_update: false
