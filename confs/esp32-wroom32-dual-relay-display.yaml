@@ -96,15 +96,15 @@ display:
 
       // --- Right Column (All Temperatures) ---
       it.printf(66 + offset_x, 12, id(font_medium), "${flow_temp}:");
-      it.printf(94 + offset_x, 12, id(font_medium), "%.1f°C", id(flow_temp).state);
+      it.printf(94 + offset_x, 12, id(font_medium), "%.1f°C", id(flow_temp_display).state);
       
       it.printf(66 + offset_x, 24, id(font_medium), "${return_temp}:");
-      it.printf(94 + offset_x, 24, id(font_medium), "%.1f°C", id(return_temp).state);
+      it.printf(94 + offset_x, 24, id(font_medium), "%.1f°C", id(return_temp_display).state);
 
       it.printf(66 + offset_x, 40, id(font_medium), "${dhw_temp}:");
-      it.printf(94 + offset_x, 40, id(font_medium), "%.1f°C", id(dhw_temp).state);
+      it.printf(94 + offset_x, 40, id(font_medium), "%.1f°C", id(dhw_temp_display).state);
 
-      it.printf(66 + offset_x, 52, id(font_medium), "${outside_temp}:");
+      it.printf(66 + offset_x, 52, id(font_medium), "${outdoor_temp}:");
       it.printf(94 + offset_x, 52, id(font_medium), "%.1f°C", id(outdoor_temp_display).state);
 
 # Text sensors for display
@@ -128,14 +128,14 @@ sensor:
   - platform: ecodan
     ecodan_id: ecodan_instance
     z1_feed_temp:
-      id: flow_temp
-      name: "Flow Temperature"
+      id: flow_temp_display
+      name: "Flow Temperature Display"
     z1_return_temp:
-      id: return_temp
-      name: "Return Temperature"
+      id: return_temp_display
+      name: "Return Temperature Display"
     dhw_temp:
-      id: dhw_temp
-      name: "DHW Temperature"
+      id: dhw_temp_display
+      name: "DHW Temperature Display"
     outside_temp:
       id: outdoor_temp_display
       name: "Outdoor Temperature Display"
