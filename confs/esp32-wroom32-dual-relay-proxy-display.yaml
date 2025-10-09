@@ -120,12 +120,12 @@ display:
       // Row 1 -------------------------------------------------------------
       // Heat pump mode (left)
       std::string mode_text = id(hp_mode).state.c_str();
-      if (mode_text.size() > 12) mode_text = mode_text.substr(0, 12);
-      it.printf(col1_x, y1, id(font_small), "%s", mode_text.c_str());
+      if (mode_text.size() > 10) mode_text = mode_text.substr(0, 10);
+      it.printf(col1_x+char_width, y1, id(font_small), "%s", mode_text.c_str());
 
       // Smart Grid level with SG prefix (right side)
       int level = (int) id(smart_grid_level).state;
-      int sg_x = col2_x + char_width*2;
+      int sg_x = col2_x + char_width;
       it.printf(sg_x, y1, id(font_small), "SG");
       it.rectangle(sg_x + char_width*2, y1, 12, 13);
       it.printf(sg_x + char_width*2 + 3, y1, id(font_small), "%d", level);  // Centered in 12px box
@@ -165,7 +165,7 @@ display:
       // IP address (Left)
       std::string ip_text = id(wifi_ip).state.c_str();
       if (ip_text.size() > 16) ip_text = ip_text.substr(0, 16);
-      it.printf(col1_x, y4, id(font_small), "%s", ip_text.c_str());
+      it.printf(col1_x+char_width, y4, id(font_small), "%s", ip_text.c_str());
 
       // WiFi bars (Center)
       int signal_strength = (int) id(wifi_signal_strength).state;
