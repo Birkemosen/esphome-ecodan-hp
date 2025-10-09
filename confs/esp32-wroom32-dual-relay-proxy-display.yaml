@@ -80,16 +80,16 @@ time:
 font:
   - file: "gfonts://JetBrains Mono"
     id: font_large
-    size: 10
+    size: 12
   - file: "gfonts://JetBrains Mono"
     id: font_medium
-    size: 9
+    size: 10
   - file: "gfonts://JetBrains Mono"
     id: font_small
-    size: 7
+    size: 9
   - file: "gfonts://JetBrains Mono"
     id: font_tiny
-    size: 6
+    size: 7
 
 # CH1116 OLED Display (130x64 pixels) - Normal orientation
 display:
@@ -168,12 +168,12 @@ display:
 
       // WiFi bars (Center)
       int signal_strength = (int) id(wifi_signal_strength).state;
-      int wifi_x = col2_x + 3 * char_width;
+      int wifi_x = col2_x + 2 * char_width;
       int wifi_y = y4+8;
-      it.filled_rectangle(wifi_x + 0, wifi_y - 2, 2, 2, Color::WHITE);
-      if (signal_strength > -80) it.filled_rectangle(wifi_x + 8, wifi_y - 4, 2, 2, Color::WHITE);
-      if (signal_strength > -70) it.filled_rectangle(wifi_x + 8, wifi_y - 6, 4, 4, Color::WHITE);
-      if (signal_strength > -60) it.filled_rectangle(wifi_x + 8, wifi_y - 8, 8, 2, Color::WHITE);
+      it.filled_rectangle(wifi_x, wifi_y - 2, 2, 2, Color::WHITE);
+      if (signal_strength > -80) it.filled_rectangle(wifi_x, wifi_y - 4, 2, 2, Color::WHITE);
+      if (signal_strength > -70) it.filled_rectangle(wifi_x, wifi_y - 6, 4, 2, Color::WHITE);
+      if (signal_strength > -60) it.filled_rectangle(wifi_x, wifi_y - 8, 8, 2, Color::WHITE);
             
       // Uptime (right)
       int uptime_hours = id(esp_uptime).state / 3600;
