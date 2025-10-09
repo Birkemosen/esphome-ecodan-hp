@@ -171,9 +171,9 @@ display:
       int wifi_x = col2_x + 3 * char_width;
       int wifi_y = y4+8;
       it.filled_rectangle(wifi_x, wifi_y, 2, 2, Color::WHITE);
-      if (signal_strength > -80) it.filled_rectangle(wifi_x, wifi_y - 4, 2, 2, Color::WHITE);
-      if (signal_strength > -70) it.filled_rectangle(wifi_x, wifi_y - 6, 4, 2, Color::WHITE);
-      if (signal_strength > -60) it.filled_rectangle(wifi_x, wifi_y - 8, 8, 2, Color::WHITE);
+      if (signal_strength > -80) it.filled_rectangle(wifi_x-1, wifi_y - 2, 4, 1, Color::WHITE);
+      if (signal_strength > -70) it.filled_rectangle(wifi_x-2, wifi_y - 3, 6, 1, Color::WHITE);
+      if (signal_strength > -60) it.filled_rectangle(wifi_x-4, wifi_y - 4, 8, 1, Color::WHITE);
             
       // Uptime (right)
       int uptime_hours = id(esp_uptime).state / 3600;
