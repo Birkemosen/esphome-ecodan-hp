@@ -141,7 +141,7 @@ display:
       
       // Relay 2 (bottom horizontal box)
       it.rectangle(rx, y1 + 7, 6, 6);
-      if (r2) it.filled_rectangle(rx + 1, y1 + 8, 4, 2, Color::WHITE);
+      if (r2) it.filled_rectangle(rx + 1, y1 + 9, 4, 2, Color::WHITE);
 
       // Row 2 -------------------------------------------------------------
       // Flow (FLW)
