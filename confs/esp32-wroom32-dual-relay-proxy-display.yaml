@@ -138,7 +138,7 @@ display:
       // Row 3 -------------------------------------------------------------
       // Heat pump mode (left)
       std::string mode_text = id(hp_mode).state.c_str();
-      if (mode_text.size() > 12) mode_text = mode_text.substr(0, 12);
+      if (mode_text.size() > 10) mode_text = mode_text.substr(0, 10);
       it.printf(col1_x, y3, id(font_small), "%s", mode_text.c_str());
 
       // Smart Grid level with SG prefix (right side)
@@ -173,7 +173,7 @@ display:
       it.filled_rectangle(wifi_x, wifi_y, 2, 2, Color::WHITE);
       if (signal_strength > -80) it.filled_rectangle(wifi_x-1, wifi_y - 2, 4, 1, Color::WHITE);
       if (signal_strength > -70) it.filled_rectangle(wifi_x-2, wifi_y - 3, 6, 1, Color::WHITE);
-      if (signal_strength > -60) it.filled_rectangle(wifi_x-4, wifi_y - 4, 8, 1, Color::WHITE);
+      if (signal_strength > -60) it.filled_rectangle(wifi_x-3, wifi_y - 4, 8, 1, Color::WHITE);
       if (signal_strength > -60) it.filled_rectangle(wifi_x-1, wifi_y - 5, 4, 1, Color::WHITE);
 
             
