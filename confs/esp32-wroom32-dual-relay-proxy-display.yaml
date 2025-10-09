@@ -150,7 +150,7 @@ display:
       // Relays as horizontal boxes (after SG)
       bool r1 = id(relay1).state;
       bool r2 = id(relay2).state;
-      int rx = col2_x + char_widht * 4;
+      int rx = col2_x + char_width * 4;
       
       // Relay 1 (top horizontal box)
       it.rectangle(rx, y3, 6, 5);
