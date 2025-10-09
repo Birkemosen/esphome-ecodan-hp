@@ -144,21 +144,21 @@ display:
       if (r2) it.filled_rectangle(rx + 1, y1 + 6, 6, 2, Color::WHITE);
 
       // Row 2 -------------------------------------------------------------
-      // Flow (Flw)
-      it.printf(col1_x, y2, id(font_small), "Flw");
+      // Flow (FLW)
+      it.printf(col1_x, y2, id(font_small), "FLW");
       it.printf(col1_x + 24, y2, id(font_small), "%.1f°", id(flow_temp_display).state);
 
-      // Return (Ret)
-      it.printf(col2_x, y2, id(font_small), "Ret");
+      // Return (RET)
+      it.printf(col2_x, y2, id(font_small), "RET");
       it.printf(col2_x + 24, y2, id(font_small), "%.1f°", id(return_temp_display).state);
 
       // Row 3 -------------------------------------------------------------
-      // DHW (Dhw)
-      it.printf(col1_x, y3, id(font_small), "Dhw");
+      // DHW (DHW)
+      it.printf(col1_x, y3, id(font_small), "DHW");
       it.printf(col1_x + 24, y3, id(font_small), "%.1f°", id(dhw_temp_display).state);
 
-      // Outdoor (Out)
-      it.printf(col2_x, y3, id(font_small), "Out");
+      // Outdoor (OUT)
+      it.printf(col2_x, y3, id(font_small), "OUT");
       it.printf(col2_x + 24, y3, id(font_small), "%.1f°", id(outdoor_temp_display).state);
 
       // Row 4 -------------------------------------------------------------
