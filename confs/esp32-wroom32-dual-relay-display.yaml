@@ -11,10 +11,10 @@ i2c:
 # Relay Outputs
 output:
   - platform: gpio
-    pin: GPIO25
+    pin: GPIO16
     id: relay1_output
   - platform: gpio
-    pin: GPIO26
+    pin: GPIO17
     id: relay2_output
 
 # Relay Switches

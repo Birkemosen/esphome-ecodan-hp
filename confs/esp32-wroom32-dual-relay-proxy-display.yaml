@@ -33,12 +33,12 @@ uart:
 
   - id: uart_proxy
     rx_pin:
-      number: GPIO16
+      number: GPIO25
       mode:
         input: true
         pullup: true
     tx_pin:
-      number: GPIO17
+      number: GPIO26
       mode:
         output: true
     baud_rate: 9600
@@ -55,10 +55,10 @@ uart:
 # Relay Outputs
 output:
   - platform: gpio
-    pin: GPIO25
+    pin: GPIO16
     id: relay1_output
   - platform: gpio
-    pin: GPIO26
+    pin: GPIO17
     id: relay2_output
 
 # Relay Switches
