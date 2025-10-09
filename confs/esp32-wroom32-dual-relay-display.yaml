@@ -60,24 +60,11 @@ display:
       int offset_x = 2;  // CH1116 right-offset
       it.fill(Color::BLACK);
 
-      // Top row: WiFi bars and Heat pump mode
-      int signal_strength = (int) id(wifi_signal_strength).state;
-      int wifi_x = 4 + offset_x;
-      int wifi_y = 8;
-      it.filled_rectangle(wifi_x + 0, wifi_y - 2, 2, 2, Color::WHITE);
-      if (signal_strength > -80) it.filled_rectangle(wifi_x + 4, wifi_y - 4, 2, 4, Color::WHITE);
-      if (signal_strength > -70) it.filled_rectangle(wifi_x + 8, wifi_y - 6, 2, 6, Color::WHITE);
-      if (signal_strength > -60) it.filled_rectangle(wifi_x + 12, wifi_y - 8, 2, 8, Color::WHITE);
-
-      // Heat pump mode (top-center)
-      std::string mode_text = id(hp_mode).state.c_str();
-      if (mode_text.size() > 12) mode_text = mode_text.substr(0, 12);
-      int mode_x = 64 + offset_x - (int) (mode_text.size() * 5) / 2;
-      it.printf(mode_x, 2, id(font_small), "%s", mode_text.c_str());
+      // Top row: Empty for cleaner look
 
       // Two rows of temps with three-letter labels
-      int y1 = 16;
-      int y2 = 32;
+      int y1 = 8;
+      int y2 = 24;
 
       // Flow (FLO)
       it.printf(18 + offset_x, y1, id(font_small), "FLO");
@@ -95,41 +82,55 @@ display:
       it.printf(74 + offset_x, y2, id(font_small), "OUT");
       it.printf(94 + offset_x, y2, id(font_small), "%.1f°", id(outdoor_temp_display).state);
 
-      // Middle row: Smart Grid and Relays
-      int ym = 48;
+      // Middle row: Heat Pump Mode, Smart Grid, and Relays
+      int ym = 40;
 
-      // Smart Grid level with SG prefix
+      // Heat pump mode (left)
+      std::string mode_text = id(hp_mode).state.c_str();
+      if (mode_text.size() > 12) mode_text = mode_text.substr(0, 12);
+      it.printf(18 + offset_x, ym - 4, id(font_small), "%s", mode_text.c_str());
+
+      // Smart Grid level with SG prefix (right side)
       int level = (int) id(smart_grid_level).state;
-      int sgx = 18 + offset_x;
+      int sgx = 70 + offset_x;
       int sgy = ym - 6;
       it.printf(sgx, sgy + 2, id(font_small), "SG");
       it.rectangle(sgx + 18, sgy, 12, 10);
       it.printf(sgx + 22, sgy + 2, id(font_small), "%d", level);  // Centered in 12px box
 
-      // Relays as stacked boxes after SG (1-2 pixels gap)
+      // Relays as horizontal boxes (after SG)
       bool r1 = id(relay1).state;
       bool r2 = id(relay2).state;
-      int rx = sgx + 33;  // Reduced gap from 35 to 33 (2 pixels)
+      int rx = sgx + 35;
       
-      // Relay 1 (top box) - same level as SG box
-      it.rectangle(rx, sgy, 8, 6);
-      if (r1) it.filled_rectangle(rx + 1, sgy + 1, 6, 4, Color::WHITE);
+      // Relay 1 (top horizontal box)
+      it.rectangle(rx, sgy - 2, 8, 4);
+      if (r1) it.filled_rectangle(rx + 1, sgy - 1, 6, 2, Color::WHITE);
       
-      // Relay 2 (bottom box) - 1 pixel gap
-      it.rectangle(rx, sgy + 7, 8, 6);
-      if (r2) it.filled_rectangle(rx + 1, sgy + 8, 6, 4, Color::WHITE);
+      // Relay 2 (bottom horizontal box)
+      it.rectangle(rx, sgy + 2, 8, 4);
+      if (r2) it.filled_rectangle(rx + 1, sgy + 3, 6, 2, Color::WHITE);
 
-      // Bottom row: IP and Uptime (tiny font)
+      // Bottom row: WiFi bars, IP and Uptime (font_small)
       int yb = 56;
       
-      // IP address (left)
+      // WiFi bars (left)
+      int signal_strength = (int) id(wifi_signal_strength).state;
+      int wifi_x = 4 + offset_x;
+      int wifi_y = yb + 2;
+      it.filled_rectangle(wifi_x + 0, wifi_y - 2, 2, 2, Color::WHITE);
+      if (signal_strength > -80) it.filled_rectangle(wifi_x + 4, wifi_y - 4, 2, 4, Color::WHITE);
+      if (signal_strength > -70) it.filled_rectangle(wifi_x + 8, wifi_y - 6, 2, 6, Color::WHITE);
+      if (signal_strength > -60) it.filled_rectangle(wifi_x + 12, wifi_y - 8, 2, 8, Color::WHITE);
+      
+      // IP address (center)
       std::string ip_text = id(wifi_ip).state.c_str();
-      if (ip_text.size() > 16) ip_text = ip_text.substr(0, 16);
-      it.printf(4 + offset_x, yb, id(font_tiny), "%s", ip_text.c_str());
+      if (ip_text.size() > 10) ip_text = ip_text.substr(0, 10);
+      it.printf(32 + offset_x, yb, id(font_small), "%s", ip_text.c_str());
       
       // Uptime (right)
       int uptime_hours = id(esp_uptime).state / 3600;
-      it.printf(90 + offset_x, yb, id(font_tiny), "%dh", uptime_hours);
+      it.printf(90 + offset_x, yb, id(font_small), "%dh", uptime_hours);
 
 # Text sensors for display
 text_sensor:
