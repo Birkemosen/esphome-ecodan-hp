@@ -53,62 +53,73 @@ display:
     invert: false
     update_interval: 2s
     lambda: |-
-      // Normal display: 128x64 (width x height)
-      // CH1116 is 130x64, so we have 2 extra pixels on the right
-      int offset_x = 2;  // Account for CH1116's 2-pixel offset
+      // Optimized for oval/pill viewport (128x64), content centered and compact
+      int offset_x = 2;  // CH1116 right-offset
       it.fill(Color::BLACK);
 
-      // --- Header Line ---
-      it.printf(0 + offset_x, 0, id(font_small), "IP: %s", id(wifi_ip).state.c_str());
-      
-      // WiFi Signal (top right)
-      int signal_strength = id(wifi_signal_strength).state;
-      int base_x = 110;  // X position for WiFi bars
-      int base_y = 8;   // Y base position (bottom of bars)
-      // Bar 1 (Always present)
-      it.filled_rectangle(base_x, base_y - 2, 2, 2, Color::WHITE);
-      // Bar 2 (Fair signal)
-      if (signal_strength > -80) it.filled_rectangle(base_x + 4, base_y - 4, 2, 4, Color::WHITE);
-      // Bar 3 (Good signal)
-      if (signal_strength > -70) it.filled_rectangle(base_x + 8, base_y - 6, 2, 6, Color::WHITE);
-      // Bar 4 (Strong signal)
-      if (signal_strength > -60) it.filled_rectangle(base_x + 12, base_y - 8, 2, 8, Color::WHITE);
+      // WiFi bars (left-center)
+      int signal_strength = (int) id(wifi_signal_strength).state;
+      int wifi_x = 4 + offset_x;
+      int wifi_y = 36;
+      it.filled_rectangle(wifi_x + 0, wifi_y - 2, 2, 2, Color::WHITE);
+      if (signal_strength > -80) it.filled_rectangle(wifi_x + 4, wifi_y - 4, 2, 4, Color::WHITE);
+      if (signal_strength > -70) it.filled_rectangle(wifi_x + 8, wifi_y - 6, 2, 6, Color::WHITE);
+      if (signal_strength > -60) it.filled_rectangle(wifi_x + 12, wifi_y - 8, 2, 8, Color::WHITE);
 
-      // --- Grid Line ---
-      it.line(0 + offset_x, 10, 128, 10);  // Horizontal line after ESP info
+      // Heat pump mode (small, top-center, truncated)
+      std::string mode_text = id(hp_mode).state.c_str();
+      if (mode_text.size() > 10) mode_text = mode_text.substr(0, 10);
+      int mode_x = 64 + offset_x - (int) (mode_text.size() * 6) / 2;  // approx width per char @ size 9
+      it.printf(mode_x, 2, id(font_small), "%s", mode_text.c_str());
 
-      // --- Heat Pump Mode Section (Left) ---
-      it.printf(0 + offset_x, 12, id(font_medium), "HP Status");
-      it.printf(0 + offset_x, 26, id(font_medium), "%s", id(hp_mode).state.c_str());
+      // Two rows of temps, compact labels
+      int y1 = 14;
+      int y2 = 30;
 
-      // --- Smart Grid Mode Section (Left) ---
-      it.line(0, 38, 62, 38);
-      it.line(62, 10, 62, 64);
-      it.printf(0 + offset_x, 40, id(font_medium), "Smart Grid");
-      std::string level_text;
-      if (id(smart_grid_level).state == 0) level_text = "Normal";
-      else if (id(smart_grid_level).state == 1) level_text = "Reduced";
-      else if (id(smart_grid_level).state == 2) level_text = "Stop";
-      else level_text = "Boost";
-      it.printf(0 + offset_x, 52, id(font_medium), "%d:%s", (int) id(smart_grid_level).state, level_text.c_str());
+      // Flow (F)
+      it.printf(22 + offset_x, y1, id(font_small), "F");
+      it.printf(32 + offset_x, y1, id(font_small), "%.1f°", id(flow_temp_display).state);
 
-      // --- Right Column (All Temperatures) ---
-      it.printf(66, 12, id(font_medium), "Flw:");
-      it.printf(94, 12, id(font_medium), "%.1f°C", id(flow_temp_display).state);
-      it.printf(66, 24, id(font_medium), "Ret:");
-      it.printf(94, 24, id(font_medium), "%.1f°C", id(return_temp_display).state);
-      it.printf(66, 40, id(font_medium), "DHW:");
-      it.printf(94, 40, id(font_medium), "%.1f°C", id(dhw_temp_display).state);
-      it.printf(66, 52, id(font_medium), "Out:");
-      it.printf(94, 52, id(font_medium), "%.1f°C", id(outdoor_temp_display).state);
+      // Return (R)
+      it.printf(78 + offset_x, y1, id(font_small), "R");
+      it.printf(88 + offset_x, y1, id(font_small), "%.1f°", id(return_temp_display).state);
 
-      // --- Bottom Row (Relay Status & Uptime) ---
-      it.printf(0 + offset_x, 58, id(font_small), "R1:%s R2:%s", 
-                id(relay1).state ? "ON" : "OFF", 
-                id(relay2).state ? "ON" : "OFF");
-      
+      // DHW (D)
+      it.printf(22 + offset_x, y2, id(font_small), "D");
+      it.printf(32 + offset_x, y2, id(font_small), "%.1f°", id(dhw_temp_display).state);
+
+      // Outdoor (O)
+      it.printf(78 + offset_x, y2, id(font_small), "O");
+      it.printf(88 + offset_x, y2, id(font_small), "%.1f°", id(outdoor_temp_display).state);
+
+      // Bottom row: Relays, Uptime, Smart Grid level
+      int yb = 50;
+
+      // Relays (two squares)
+      bool r1 = id(relay1).state;
+      bool r2 = id(relay2).state;
+      int rx = 22 + offset_x;
+      it.printf(rx - 10, yb, id(font_small), "R");
+      it.rectangle(rx, yb - 6, 10, 10);
+      if (r1) it.filled_rectangle(rx + 2, yb - 4, 6, 6, Color::WHITE);
+      rx += 14;
+      it.rectangle(rx, yb - 6, 10, 10);
+      if (r2) it.filled_rectangle(rx + 2, yb - 4, 6, 6, Color::WHITE);
+
+      // Uptime (center-bottom)
       int uptime_hours = id(esp_uptime).state / 3600;
-      it.printf(66, 58, id(font_small), "Uptime: %dh", uptime_hours);
+      it.printf(56 + offset_x, yb, id(font_small), "U%dh", uptime_hours);
+
+      // Smart Grid level (four bars)
+      int level = (int) id(smart_grid_level).state;
+      int sgx = 96 + offset_x;
+      for (int i = 0; i < 4; i++) {
+        if (i < level) {
+          it.filled_rectangle(sgx + i * 8, yb - 6, 6, 10, Color::WHITE);
+        } else {
+          it.rectangle(sgx + i * 8, yb - 6, 6, 10);
+        }
+      }
 
 # Text sensors for display
 text_sensor:
