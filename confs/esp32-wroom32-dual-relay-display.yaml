@@ -34,16 +34,16 @@ time:
 
 # Fonts for display
 font:
-  - file: "gfonts://Roboto-Mono"
+  - file: "gfonts://JetBrains Mono"
     id: font_large
     size: 10
-  - file: "gfonts://Roboto-Mono"
+  - file: "gfonts://JetBrains Mono"
     id: font_medium
     size: 9
-  - file: "gfonts://Roboto-Mono"
+  - file: "gfonts://JetBrains Mono"
     id: font_small
     size: 7
-  - file: "gfonts://Roboto-Mono "
+  - file: "gfonts://JetBrains Mono"
     id: font_tiny
     size: 6
 
