@@ -34,16 +34,16 @@ time:
 
 # Fonts for display
 font:
-  - file: "fonts/LiberationSans-Regular.ttf"
+  - file: "gfonts://Roboto"
     id: font_large
     size: 12
-  - file: "fonts/LiberationSans-Regular.ttf"
+  - file: "gfonts://Roboto"
     id: font_medium
     size: 11
-  - file: "fonts/LiberationSans-Regular.ttf"
+  - file: "gfonts://Roboto"
     id: font_small
     size: 9
-  - file: "fonts/LiberationSans-Regular.ttf"
+  - file: "gfonts://Roboto"
     id: font_tiny
     size: 7
 
