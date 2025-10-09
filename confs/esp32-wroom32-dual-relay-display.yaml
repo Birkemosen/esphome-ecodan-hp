@@ -124,16 +124,16 @@ display:
 
       // WiFi bars (Center)
       int signal_strength = (int) id(wifi_signal_strength).state;
-      int wifi_x = col2_x + 2 * char_width;
+      int wifi_x = col2_x + 3 * char_width;
       int wifi_y = y4+8;
-      it.filled_rectangle(wifi_x, wifi_y - 2, 2, 2, Color::WHITE);
+      it.filled_rectangle(wifi_x, wifi_y, 2, 2, Color::WHITE);
       if (signal_strength > -80) it.filled_rectangle(wifi_x, wifi_y - 4, 2, 2, Color::WHITE);
       if (signal_strength > -70) it.filled_rectangle(wifi_x, wifi_y - 6, 4, 2, Color::WHITE);
       if (signal_strength > -60) it.filled_rectangle(wifi_x, wifi_y - 8, 8, 2, Color::WHITE);
             
       // Uptime (right)
       int uptime_hours = id(esp_uptime).state / 3600;
-      it.printf(col2_x + 24, y4, id(font_small), "%dh", uptime_hours);
+      it.printf(col2_x + 30, y4, id(font_small), "%dh", uptime_hours);
 
 # Text sensors for display
 text_sensor:
