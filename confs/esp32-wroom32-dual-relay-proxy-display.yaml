@@ -78,18 +78,18 @@ time:
 
 # Fonts for display
 font:
-  - file: "fonts/DejaVuSans.ttf"
+  - file: "fonts/LiberationSans-Regular.ttf"
     id: font_large
     size: 12
-  - file: "fonts/DejaVuSans.ttf"
+  - file: "fonts/LiberationSans-Regular.ttf"
     id: font_medium
     size: 11
-  - file: "fonts/DejaVuSans.ttf"
+  - file: "fonts/LiberationSans-Regular.ttf"
     id: font_small
     size: 9
-  - file: "fonts/DejaVuSans.ttf"
+  - file: "fonts/LiberationSans-Regular.ttf"
     id: font_tiny
-    size: 7
+    size: 8
 
 # CH1116 OLED Display (130x64 pixels) - Normal orientation
 display:
