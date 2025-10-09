@@ -43,6 +43,9 @@ font:
   - file: "fonts/UbuntuMono-Regular.ttf"
     id: font_small
     size: 9
+  - file: "fonts/UbuntuMono-Regular.ttf"
+    id: font_tiny
+    size: 7
 
 # CH1116 OLED Display (130x64 pixels) - Normal orientation
 display:
@@ -82,7 +85,7 @@ display:
 
       // Return (RET)
       it.printf(74 + offset_x, y1, id(font_small), "RET");
-      it.printf(98 + offset_x, y1, id(font_small), "%.1f°", id(return_temp_display).state);
+      it.printf(94 + offset_x, y1, id(font_small), "%.1f°", id(return_temp_display).state);
 
       // DHW (DHW)
       it.printf(18 + offset_x, y2, id(font_small), "DHW");
@@ -90,7 +93,7 @@ display:
 
       // Outdoor (OUT)
       it.printf(74 + offset_x, y2, id(font_small), "OUT");
-      it.printf(98 + offset_x, y2, id(font_small), "%.1f°", id(outdoor_temp_display).state);
+      it.printf(94 + offset_x, y2, id(font_small), "%.1f°", id(outdoor_temp_display).state);
 
       // Middle row: Smart Grid and Relays
       int ym = 48;
@@ -101,32 +104,32 @@ display:
       int sgy = ym - 6;
       it.printf(sgx, sgy + 2, id(font_small), "SG");
       it.rectangle(sgx + 18, sgy, 12, 10);
-      it.printf(sgx + 21, sgy + 2, id(font_small), "%d", level);
+      it.printf(sgx + 22, sgy + 2, id(font_small), "%d", level);  // Centered in 12px box
 
-      // Relays as stacked boxes after SG
+      // Relays as stacked boxes after SG (1-2 pixels gap)
       bool r1 = id(relay1).state;
       bool r2 = id(relay2).state;
-      int rx = sgx + 35;
+      int rx = sgx + 33;  // Reduced gap from 35 to 33 (2 pixels)
       
-      // Relay 1 (top box)
-      it.rectangle(rx, sgy - 2, 8, 6);
-      if (r1) it.filled_rectangle(rx + 1, sgy - 1, 6, 4, Color::WHITE);
+      // Relay 1 (top box) - same level as SG box
+      it.rectangle(rx, sgy, 8, 6);
+      if (r1) it.filled_rectangle(rx + 1, sgy + 1, 6, 4, Color::WHITE);
       
-      // Relay 2 (bottom box)
-      it.rectangle(rx, sgy + 2, 8, 6);
-      if (r2) it.filled_rectangle(rx + 1, sgy + 3, 6, 4, Color::WHITE);
+      // Relay 2 (bottom box) - 1 pixel gap
+      it.rectangle(rx, sgy + 7, 8, 6);
+      if (r2) it.filled_rectangle(rx + 1, sgy + 8, 6, 4, Color::WHITE);
 
-      // Bottom row: IP and Uptime
-      int yb = 58;
+      // Bottom row: IP and Uptime (tiny font)
+      int yb = 56;
       
       // IP address (left)
       std::string ip_text = id(wifi_ip).state.c_str();
-      if (ip_text.size() > 12) ip_text = ip_text.substr(0, 12);
-      it.printf(4 + offset_x, yb, id(font_small), "%s", ip_text.c_str());
+      if (ip_text.size() > 16) ip_text = ip_text.substr(0, 16);
+      it.printf(4 + offset_x, yb, id(font_tiny), "%s", ip_text.c_str());
       
       // Uptime (right)
       int uptime_hours = id(esp_uptime).state / 3600;
-      it.printf(90 + offset_x, yb, id(font_small), "%dh", uptime_hours);
+      it.printf(90 + offset_x, yb, id(font_tiny), "%dh", uptime_hours);
 
 # Text sensors for display
 text_sensor:
