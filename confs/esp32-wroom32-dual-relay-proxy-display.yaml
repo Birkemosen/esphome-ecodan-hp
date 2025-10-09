@@ -144,8 +144,8 @@ display:
       // Smart Grid level with SG prefix (right side)
       int level = (int) id(smart_grid_level).state;
       it.printf(col2_x, y3, id(font_small), "SG");
-      it.rectangle(col2_x + char_width*2, y3 + 6, 12, 10);
-      it.printf(col2_x + char_width*2 + 4, y3, id(font_tiny), "%d", level);  // Centered in 12px box
+      it.rectangle(col2_x + char_width*2 -1, y3 + 1, 12, 10);
+      it.printf(col2_x + char_width*2 + 4, y3, id(font_small), "%d", level);  // Centered in 12px box
 
       // Relays as horizontal boxes (after SG)
       bool r1 = id(relay1).state;
@@ -163,12 +163,12 @@ display:
       // Row 4 -------------------------------------------------------------
       // IP address (Left)
       std::string ip_text = id(wifi_ip).state.c_str();
-      if (ip_text.size() > 10) ip_text = ip_text.substr(0, 10);
+      if (ip_text.size() > 16) ip_text = ip_text.substr(0, 16);
       it.printf(col1_x, y4, id(font_tiny), "%s", ip_text.c_str());
 
-      // WiFi bars (left)
+      // WiFi bars (Center)
       int signal_strength = (int) id(wifi_signal_strength).state;
-      int wifi_x = col1_x;
+      int wifi_x = col1_x + 16 * char_width;
       int wifi_y = y4+8;
       it.filled_rectangle(wifi_x + 0, wifi_y - 2, 2, 2, Color::WHITE);
       if (signal_strength > -80) it.filled_rectangle(wifi_x + 4, wifi_y - 4, 2, 4, Color::WHITE);
@@ -177,7 +177,7 @@ display:
             
       // Uptime (right)
       int uptime_hours = id(esp_uptime).state / 3600;
-      it.printf(col2_x + 24, y4, id(font_small), "%dh", uptime_hours);
+      it.printf(col2_x + 24, y4, id(font_tiny), "%dh", uptime_hours);
 
 # Text sensors for display
 text_sensor:
