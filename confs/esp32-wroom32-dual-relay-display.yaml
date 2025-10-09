@@ -34,18 +34,18 @@ time:
 
 # Fonts for display
 font:
-  - file: "gfonts://Roboto"
+  - file: "gfonts://Source Code Pro"
     id: font_large
-    size: 10
-  - file: "gfonts://Roboto"
+    size: 12
+  - file: "gfonts://Source Code Pro"
     id: font_medium
-    size: 9
-  - file: "gfonts://Roboto"
+    size: 10
+  - file: "gfonts://Source Code Pro"
     id: font_small
-    size: 7
-  - file: "gfonts://Roboto"
+    size: 9
+  - file: "gfonts://Source Code Pro"
     id: font_tiny
-    size: 6
+    size: 8
 
 # CH1116 OLED Display (130x64 pixels) - Normal orientation
 display:
