@@ -1,16 +1,16 @@
 # ESP32 WROOM32 Dual Relay Board with Proxy Support
 # This configuration provides dual relay control with proxy UART support
 
-# UART Configuration for Proxy
+# UART Configuration for Ecodan
 uart:
   - id: uart_ecodan
     rx_pin:
-      number: GPIO1
+      number: GPIO3
       mode:
         input: true
         pullup: true
     tx_pin:
-      number: GPIO2
+      number: GPIO1
       mode:
         output: true
     baud_rate: 2400
@@ -23,15 +23,15 @@ uart:
         delimiter: "\n"
       sequence:
         - lambda: UARTDebug::log_hex(direction, bytes, ' ');
-
+# UART Configuration for Proxy
   - id: uart_proxy
     rx_pin:
-      number: GPIO16
+      number: GPIO9
       mode:
         input: true
         pullup: true
     tx_pin:
-      number: GPIO17
+      number: GPIO10
       mode:
         output: true
     baud_rate: 9600
@@ -48,10 +48,10 @@ uart:
 # Relay Outputs
 output:
   - platform: gpio
-    pin: GPIO25
+    pin: GPIO16
     id: relay1_output
   - platform: gpio
-    pin: GPIO26
+    pin: GPIO17
     id: relay2_output
 
 # Relay Switches

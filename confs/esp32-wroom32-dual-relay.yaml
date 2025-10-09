@@ -1,13 +1,36 @@
-# ESP32 WROOM32 Dual Relay Board Configuration
-# This configuration provides dual relay control without display
+# ESP32 WROOM32 Dual Relay Board
+# This configuration provides dual relay control
+
+# UART Configuration for Ecodan
+uart:
+  - id: uart_ecodan
+    rx_pin:
+      number: GPIO3
+      mode:
+        input: true
+        pullup: true
+    tx_pin:
+      number: GPIO1
+      mode:
+        output: true
+    baud_rate: 2400
+    parity: EVEN
+    stop_bits: 1
+    debug:
+      direction: BOTH
+      dummy_receiver: false
+      after:
+        delimiter: "\n"
+      sequence:
+        - lambda: UARTDebug::log_hex(direction, bytes, ' ');
 
 # Relay Outputs
 output:
   - platform: gpio
-    pin: GPIO25
+    pin: GPIO16
     id: relay1_output
   - platform: gpio
-    pin: GPIO26
+    pin: GPIO17
     id: relay2_output
 
 # Relay Switches

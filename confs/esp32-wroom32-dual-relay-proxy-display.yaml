@@ -8,16 +8,16 @@ i2c:
   scan: true
   frequency: 800kHz
 
-# UART Configuration for Proxy
+# UART Configuration for Ecodan
 uart:
   - id: uart_ecodan
     rx_pin:
-      number: GPIO1
+      number: GPIO3
       mode:
         input: true
         pullup: true
     tx_pin:
-      number: GPIO2
+      number: GPIO1
       mode:
         output: true
     baud_rate: 2400
@@ -30,15 +30,15 @@ uart:
         delimiter: "\n"
       sequence:
         - lambda: UARTDebug::log_hex(direction, bytes, ' ');
-
+# UART Configuration for Proxy
   - id: uart_proxy
     rx_pin:
-      number: GPIO25
+      number: GPIO9
       mode:
         input: true
         pullup: true
     tx_pin:
-      number: GPIO26
+      number: GPIO10
       mode:
         output: true
     baud_rate: 9600
