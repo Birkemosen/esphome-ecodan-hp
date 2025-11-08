@@ -69,3 +69,4 @@ number:
             id(relay1).turn_on();
             id(relay2).turn_on();
           }
+ 

@@ -33,12 +33,12 @@ uart:
 # UART Configuration for Proxy
   - id: uart_proxy
     rx_pin:
-      number: GPIO9
+      number: GPIO9 # SD2 on ESP32 WROOM32 Dual Relay Board
       mode:
         input: true
         pullup: true
     tx_pin:
-      number: GPIO10
+      number: GPIO10 # SD3 on ESP32 WROOM32 Dual Relay Board
       mode:
         output: true
     baud_rate: 9600
