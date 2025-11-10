@@ -1,3 +1,31 @@
+globals:
+# delta_energy_consumed_increasing
+  - id: _delta_energy_consumed_increasing_daily_input_last_value
+    type: float
+    restore_value: yes
+    initial_value: '0.0'
+  - id: _delta_energy_consumed_increasing_daily_input_partial_sum
+    type: float
+    restore_value: yes
+    initial_value: '0.0'
+  - id: _delta_energy_consumed_increasing_daily_input_last_day
+    type: int
+    restore_value: yes
+    initial_value: '-1' 
+  # computed_cop
+  - id: _computed_cop_production_sum
+    type: float
+    restore_value: yes
+    initial_value: '0.0'
+  - id: _computed_cop_last_input_value
+    type: float
+    restore_value: yes
+    initial_value: '0.0'
+  - id: _computed_cop_valid_production
+    type: bool
+    restore_value: yes
+    initial_value: 'false'
+
 ####################
 # heatpump commands
 
@@ -152,6 +180,25 @@ text_sensor:
           case esphome::ecodan::Status::OperationMode::LEGIONELLA_PREVENTION: return std::string("${legionella_prevention}");
           case esphome::ecodan::Status::OperationMode::UNAVAILABLE:
           default: return std::string("Unknown");
+      }
+
+  - platform: template
+    id: pump_feedback_status
+    name: ${pump_feedback_status}
+    lambda: |-
+      auto value = id(ecodan_instance).get_status().PumpFeedback;
+      if (value >= 0 && value < 70) { // 0-69
+        return std::string("Active");;
+      } else if (value > 73 && value < 77) { // 74-76
+        return std::string("Warning");
+      } else if (value > 83 && value < 87) { // 84-86
+        return std::string("Electrical error");
+      } else if (value > 88 && value < 92) { // 89-91
+        return std::string("Blocked error");
+      } else if (value <= 93 || value >= 97) { 
+        return std::string("-");
+      } else { 
+        return std::string("Standby");
       }
 
   # - platform: template
@@ -328,27 +375,15 @@ sensor:
     flow_rate:
       id: flow_rate 
       name: ${flow_rate}      
-    cool_cop:
-      name: ${cool_cop}
-    cool_consumed:
-      name: ${cool_consumed}
-    cool_delivered:
-      name: ${cool_delivered}
-    heating_cop:
-      name: ${heating_cop}
-    heating_consumed:
-      name: ${heating_consumed}
-    heating_delivered:
-      name: ${heating_delivered}
-    dhw_cop:
-      name: ${dhw_cop}
-    dhw_consumed:
-      name: ${dhw_consumed}
-    dhw_delivered:
-      name: ${dhw_delivered}
     refrigerant_error_code:
       internal: true
       id: refrigerant_error_code
+    pump_speed:
+      id: pump_speed
+      name: ${pump_speed}
+    pump_feedback:
+      id: pump_feedback
+      name: ${pump_feedback}
     energy_consumed_increasing:
       internal: true
       id: energy_consumed_increasing
@@ -361,22 +396,24 @@ sensor:
     state_class: total_increasing
     filters:
       - lambda: |-
-          static float last_value = 0.0;
-          static float partial_sum = 0.0;
-          static uint16_t last_day_of_year = 0;
+          auto& last_value = id(_delta_energy_consumed_increasing_daily_input_last_value);
+          auto& partial_sum = id(_delta_energy_consumed_increasing_daily_input_partial_sum);
+          auto& last_day_of_year = id(_delta_energy_consumed_increasing_daily_input_last_day);
 
-          auto t = id(sntp_time).now();
-          if (!t.is_valid())
-            return {};
+          auto& status = id(ecodan_instance).get_status();
+          int controller_day = status.day_of_year();
+
+          if (controller_day == -1) 
+            return partial_sum;
 
           if (last_value == 0) {
             last_value = x;
-            last_day_of_year = t.day_of_year;
+            last_day_of_year = controller_day;
             return partial_sum;
           }
 
-          if (t.day_of_year != last_day_of_year) {
-            last_day_of_year = t.day_of_year;
+          if (controller_day != last_day_of_year) {
+            last_day_of_year = controller_day;
             partial_sum = 0.0f;
           }
 
@@ -394,9 +431,9 @@ sensor:
       auto status = id(ecodan_instance).get_status();
 
       // sample every 10s      
-      static float production = 0.0f;
-      static float last_input_value = 0.0f;
-      static bool valid_production = false;
+      auto& production = id(_computed_cop_production_sum);
+      auto& last_input_value = id(_computed_cop_last_input_value);
+      auto& valid_production = id(_computed_cop_valid_production);
       
       if (status.CompressorFrequency == 0.0f) {
         // only calculate COP when comnpressor is active
@@ -443,18 +480,43 @@ sensor:
     entity_category: diagnostic
     update_interval: 5s
 
-  - platform: total_daily_energy
-    name: ${daily_computed_output_power}
-    power_id: computed_output_power
-    unit_of_measurement: 'kWh'
-    state_class: total
-    device_class: energy
-    accuracy_decimals: 3
+  # helper class to reset daily counter _day_of_year
+  - platform: template
+    id: heatpump_day_of_year
+    #name: debug day of year
+    icon: "mdi:calendar-today"
+    internal: true
+    update_interval: 60s 
+    lambda: |-
+      auto& status = id(ecodan_instance).get_status();
+      int controller_day = status.day_of_year();
 
-# Enable time component to reset energy at midnight
-time:
-  - platform: sntp
-    id: sntp_time
+      if (controller_day == -1) {
+        return NAN;
+      }
+
+      float previous_day_float = id(heatpump_day_of_year).state;
+      if (isnan(previous_day_float)) {
+        return (float)controller_day; 
+      }
+
+      int previous_day = (int)previous_day_float;
+      if (controller_day != previous_day) {
+        ESP_LOGD("ecodan.component", "Day transition detected (%d -> %d). Resetting integration sensor.", previous_day, controller_day);        
+        id(daily_computed_output_power).reset(); 
+      }
+      return (float)controller_day;
+
+  - platform: integration
+    id: daily_computed_output_power 
+    name: ${daily_computed_output_power}
+    sensor: computed_output_power
+    unit_of_measurement: 'kWh'
+    accuracy_decimals: 3
+    device_class: energy
+    state_class: total_increasing 
+    time_unit: h
+    restore: true
 
 binary_sensor:
   - platform: ecodan

@@ -61,13 +61,6 @@ namespace ecodan
         BOTH
     };
 
-    enum class SetHpMode
-    {
-        TEMPERATURE_MODE,
-        FLOW_CONTROL_MODE,
-        COMPENSATION_CURVE_MODE
-    };
-
     enum class GetType : uint8_t
     {
         DATETIME_FIRMWARE = 0x01,
@@ -107,6 +100,12 @@ namespace ecodan
         ENERGY_DELIVERY = 0xA2,
         HARDWARE_CONFIGURATION = 0xC9,
         SERVICE_REQUEST_CODE = 0xA3
+    };
+
+    struct InterpolationSegment {
+        uint8_t max_byte;
+        float scale;
+        float offset;
     };
 
     template <class T>
@@ -150,44 +149,44 @@ namespace ecodan
     struct Message
     {
         Message()
-            : cmd_{false}, buffer_{}
+            : buffer_{}
         {
         }
 
         Message(MsgType msgType)
-            : cmd_{true}, buffer_{HEADER_MAGIC_A1, static_cast<uint8_t>(msgType), HEADER_MAGIC_B, HEADER_MAGIC_C, 0x00}, writeOffset_(HEADER_SIZE_A)
+            : buffer_{HEADER_MAGIC_A1, static_cast<uint8_t>(msgType), HEADER_MAGIC_B, HEADER_MAGIC_C, 0x00}, writeOffset_(HEADER_SIZE_A)
         {
         }
 
         Message(MsgType msgType, SetType setType)
-            : cmd_{true}, buffer_{HEADER_MAGIC_A1, static_cast<uint8_t>(msgType), HEADER_MAGIC_B, HEADER_MAGIC_C, 0x00}, writeOffset_(HEADER_SIZE_A)
+            : buffer_{HEADER_MAGIC_A1, static_cast<uint8_t>(msgType), HEADER_MAGIC_B, HEADER_MAGIC_C, 0x00}, writeOffset_(HEADER_SIZE_A)
         {
             // All SET_CMD messages have 15-bytes of zero payload.
-            char payload[PAYLOAD_SIZE] = {};
+            uint8_t payload[PAYLOAD_SIZE] = {};
             payload[0] = static_cast<uint8_t>(setType);
             write_payload(payload, sizeof(payload));
         }
 
         Message(MsgType msgType, GetType getType)
-            : cmd_{true}, buffer_{HEADER_MAGIC_A1, static_cast<uint8_t>(msgType), HEADER_MAGIC_B, HEADER_MAGIC_C, 0x00}, writeOffset_(HEADER_SIZE_A)
+            : buffer_{HEADER_MAGIC_A1, static_cast<uint8_t>(msgType), HEADER_MAGIC_B, HEADER_MAGIC_C, 0x00}, writeOffset_(HEADER_SIZE_A)
         {
             // All GET_CMD messages have 15-bytes of zero payload.
-            char payload[PAYLOAD_SIZE] = {};
+            uint8_t payload[PAYLOAD_SIZE] = {};
             payload[0] = static_cast<uint8_t>(getType);
             write_payload(payload, sizeof(payload));
         }
 
         Message(MsgType msgType, GetType getType, int16_t request_code)
-        : cmd_{true}, buffer_{HEADER_MAGIC_A1, static_cast<uint8_t>(msgType), HEADER_MAGIC_B, HEADER_MAGIC_C, 0x00}, writeOffset_(HEADER_SIZE_A)
+        : buffer_{HEADER_MAGIC_A1, static_cast<uint8_t>(msgType), HEADER_MAGIC_B, HEADER_MAGIC_C, 0x00}, writeOffset_(HEADER_SIZE_A)
         {
-            char payload[PAYLOAD_SIZE] = {};
+            uint8_t payload[PAYLOAD_SIZE] = {};
             payload[0] = static_cast<uint8_t>(getType);
             write_payload(payload, sizeof(payload));
             set_int16(request_code, 1);
         }
 
         // Message(MsgType msgType, const std::array<char, PAYLOAD_SIZE>& payload)
-        //     : cmd_{true}, buffer_{HEADER_MAGIC_A1, static_cast<uint8_t>(msgType), HEADER_MAGIC_B, HEADER_MAGIC_C, 0x00}, writeOffset_(HEADER_SIZE_A)
+        //     : buffer_{HEADER_MAGIC_A1, static_cast<uint8_t>(msgType), HEADER_MAGIC_B, HEADER_MAGIC_C, 0x00}, writeOffset_(HEADER_SIZE_A)
         // {
         //     //custom payload msg.
         //     write_payload(payload.data(), payload.size());
@@ -195,7 +194,6 @@ namespace ecodan
 
         Message(Message&& other)
         {
-            cmd_ = other.cmd_;
             memcpy(buffer_, other.buffer_, sizeof(buffer_));
             writeOffset_ = other.writeOffset_;
             valid_ = other.valid_;
@@ -204,7 +202,6 @@ namespace ecodan
 
         Message& operator=(Message&& other)
         {
-            cmd_ = other.cmd_;
             memcpy(buffer_, other.buffer_, sizeof(buffer_));
             writeOffset_ = other.writeOffset_;
             valid_ = other.valid_;
@@ -220,8 +217,7 @@ namespace ecodan
             
             char result[1024];
 
-            snprintf(result, 1024, "%s { .Hdr { %02X, %02X, %02X, %02X, %02X } .Payload { %02X, %02X, %02X, %02X, %02X, %02X, %02X, %02X, %02X, %02X, %02X, %02X, %02X, %02X, %02X, %02X } .Chk { %02X } }",
-                    cmd_ ? "CMD" : "RES",
+            snprintf(result, 1024, "[%02X %02X %02X %02X %02X] %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X [%02X]",
                     buffer_[0], buffer_[1], buffer_[2], buffer_[3], buffer_[4],
                     buffer_[5], buffer_[6], buffer_[7], buffer_[8], buffer_[9],
                     buffer_[10], buffer_[11], buffer_[12], buffer_[13], buffer_[14],
@@ -231,20 +227,22 @@ namespace ecodan
             return std::string(result);
         }
 
-        bool verify_header()
-        {
-            if (buffer_[0] != HEADER_MAGIC_A1 && buffer_[0] != HEADER_MAGIC_A2)
-                return false;
+        bool has_valid_sync_byte() const {
+            return buffer_[0] == HEADER_MAGIC_A1 || buffer_[0] == HEADER_MAGIC_A2;
             // if (buffer_[0] == HEADER_MAGIC_A1 && (buffer_[2] != HEADER_MAGIC_B || buffer_[3] != HEADER_MAGIC_C))
             //     return false;
             // else if (buffer_[0] == HEADER_MAGIC_B && (buffer_[1] != HEADER_MAGIC_D || buffer_[2] != HEADER_MAGIC_D))
             //     return false;
+        }
+
+        bool verify_header()
+        {
+            if (!has_valid_sync_byte())
+                return false;
 
             if (payload_size() > PAYLOAD_SIZE)
                 return false;
-
-            memset(payload(), 0, PAYLOAD_SIZE + CHECKSUM_SIZE);
-
+            //memset(payload(), 0, PAYLOAD_SIZE + CHECKSUM_SIZE);
             return true; // Looks like a valid header!
         }
 
@@ -269,33 +267,8 @@ namespace ecodan
             return header_size() + payload_size() + CHECKSUM_SIZE;
         }
 
-        size_t payload_size_offset() const {
-            return buffer_[0] == HEADER_MAGIC_A1 ? PAYLOAD_SIZE_OFFSET_A : PAYLOAD_SIZE_OFFSET_B; 
-        }
-
-        size_t payload_size() const
-        {
-            return buffer_[payload_size_offset()];
-        }
-
-        uint8_t* payload()
-        {
-            return buffer_ + header_size();
-        }
-
         size_t header_size() const {
             return buffer_[0] == HEADER_MAGIC_A1 ? HEADER_SIZE_A : HEADER_SIZE_B; 
-        }
-
-        bool write_header(const char* data, uint8_t length)
-        {
-            if (length != HEADER_SIZE_A && length != HEADER_SIZE_B)
-                return false;
-
-            memcpy(buffer_, data, length);
-            writeOffset_ = length;
-            valid_ = true;
-            return true;
         }
 
         bool write_payload(const uint8_t *data, uint8_t length)
@@ -318,10 +291,6 @@ namespace ecodan
             valid_ = true;
             return true;
         }
-        bool write_payload(const char *data, uint8_t length)
-        {
-            return write_payload((const uint8_t *)data, length);
-        }
 
         void append_byte(const char data)
         {
@@ -337,7 +306,7 @@ namespace ecodan
             buffer_[writeOffset_] = calculate_checksum();
         }
 
-        uint8_t get_write_offset()
+        uint8_t get_write_offset() const
         {
             return writeOffset_;
         }
@@ -353,6 +322,20 @@ namespace ecodan
             return false;
         }
 
+        bool matches(const uint8_t* pattern, size_t length) const {
+            if (writeOffset_ != length) {
+                return false;
+            }
+            return memcmp(buffer_, pattern, length) == 0;
+        }
+
+        void reset() {
+            memset(buffer_, 0, sizeof(buffer_));
+            writeOffset_ = 0;
+            valid_ = false;
+        }
+
+        // parsers
         float get_float24(size_t index)
         {
             float value = uint16_t(payload()[index] << 8) | payload()[index + 1];
@@ -394,10 +377,36 @@ namespace ecodan
             return (value - 40.0f) / 2;
         }
 
+        // 10k NTC-sensor (type B=3950K)
         float get_float8_v3(size_t index)
         {
-            float value = payload()[index];
-            return (value - 128.0f) / 2;
+            static const InterpolationSegment NTC_TABLE[] = {
+                // max_byte, scale,         offset
+                {  0x40,    0.79f,       -42.68f     }, // (64)
+                {  0x44,    0.7525f,     -40.28f     }, // (68)
+                {  0x4B,    0.69f,       -36.03f     }, // (75)
+                {  0x56,    0.60909f,    -29.9618f   }, // (86)
+                {  0x5D,    0.54714f,    -24.621f    }, // (93)
+                {  0x6A,    0.49308f,    -19.606f    }, // (106)
+                {  0x73,    0.44556f,    -14.545f    }, // (115)
+                {  0x80,    0.40923f,    -10.395f    }, // (128)
+                {  0x8B,    0.37364f,    -5.748f     }, // (139)
+                {  0x9B,    0.34313f,    -1.503f     }, // (155)
+                {  0xB4,    0.306f,      4.187f      }, // (180)
+                {  0xB7,    0.28667f,    7.67f       }  // (183)
+            };
+            static const size_t NTC_TABLE_SIZE = sizeof(NTC_TABLE) / sizeof(NTC_TABLE[0]);
+
+            uint8_t byteValue = payload()[index]; 
+            for (size_t i = 0; i < NTC_TABLE_SIZE; ++i) {
+                if (byteValue <= NTC_TABLE[i].max_byte) {
+                    float value = (float)byteValue;
+                    return (value * NTC_TABLE[i].scale) + NTC_TABLE[i].offset;
+                }
+            }
+            const auto& lastSegment = NTC_TABLE[NTC_TABLE_SIZE - 1];
+            float value = (float)byteValue;
+            return (value * lastSegment.scale) + lastSegment.offset;
         }
 
         uint16_t get_u16(size_t index)
@@ -440,6 +449,20 @@ namespace ecodan
         }
 
       private:
+        size_t payload_size_offset() const {
+            return buffer_[0] == HEADER_MAGIC_A1 ? PAYLOAD_SIZE_OFFSET_A : PAYLOAD_SIZE_OFFSET_B; 
+        }
+        
+        size_t payload_size() const
+        {
+            return buffer_[payload_size_offset()];
+        }
+
+        uint8_t* payload()
+        {
+            return buffer_ + header_size();
+        }
+
         uint8_t calculate_checksum()
         {
             uint8_t checkSum = 0;
@@ -451,7 +474,6 @@ namespace ecodan
             return checkSum;
         }
 
-        bool cmd_;
         bool valid_ = false;
         uint8_t buffer_[HEADER_SIZE_B + PAYLOAD_SIZE + sizeof(uint8_t)];
         uint8_t writeOffset_ = 0;

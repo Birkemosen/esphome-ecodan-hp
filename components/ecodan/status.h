@@ -53,6 +53,9 @@ namespace ecodan
 
         float Runtime;
         bool WaterPumpActive;
+        uint8_t PumpPWM;
+        uint8_t PumpFeedback;
+        
         bool WaterPump2Active;
         bool WaterPump3Active;
         bool ThreeWayValveActive;
@@ -180,6 +183,21 @@ namespace ecodan
         float RcSubCoolTemp;
         uint16_t RcFanSpeedRpm;
 
+        int day_of_year() const {
+            if (ControllerDateTime.tm_year < 100)
+                return -1;
+
+            return ControllerDateTime.tm_yday;
+        }
+
+        const time_t timestamp() const {
+            if (ControllerDateTime.tm_year < 100)
+                return -1;
+            struct tm dt = ControllerDateTime; 
+            dt.tm_isdst = -1; 
+            return mktime(&dt);
+        }
+
         bool has_cooling() const {
             // SW2-4
             return IS_BIT_SET(DipSwitch2, 3);
@@ -187,10 +205,14 @@ namespace ecodan
 
         bool has_independent_z2() const {
             if (IS_BIT_SET(DipSwitch3, 5) && !IS_BIT_SET(DipSwitch2, 6)) // SW3-6 True, SW2-7 False
-                return false;
+                return false; //z1, z2 -> same flow
             else if (IS_BIT_SET(DipSwitch2, 5) || IS_BIT_SET(DipSwitch2, 6)) // SW2-6 or SW2-7 True
-                return true;
+                return true; 
             return false;
+        }
+
+        bool has_2zones() const {
+            return IS_BIT_SET(DipSwitch2, 6);
         }
 
         CONTROLLER_FLAG get_svc_flags() const

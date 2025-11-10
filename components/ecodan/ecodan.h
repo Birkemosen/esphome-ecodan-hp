@@ -4,6 +4,7 @@
 #include <string>
 #include <chrono>
 #include <optional>
+#include <atomic>
 
 #include "esphome.h"
 #include "esphome/core/component.h"
@@ -13,32 +14,48 @@
 #include "esphome/components/text_sensor/text_sensor.h"
 #include "esphome/components/binary_sensor/binary_sensor.h"
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/queue.h" 
+#include "freertos/semphr.h"
+
 #include "proto.h"
 #include "status.h"
 
 namespace esphome {
 namespace ecodan 
 {    
-    static constexpr const char *TAG = "ecodan.component";   
+    static constexpr const char *TAG = "ecodan.component";
+
+    struct QueuedCommand {
+        Message message;
+        int retries = 0;
+        unsigned long last_sent_time = 0; 
+    };
 
     class EcodanHeatpump : public PollingComponent {
     public:        
-        EcodanHeatpump() : PollingComponent() {}
+        EcodanHeatpump();
         void setup() override;
         void update() override;
         void loop() override;
         void dump_config() override;    
     
         void register_sensor(sensor::Sensor *obj, const std::string& key) {
-            sensors[key] = obj;
+            if (obj != nullptr)
+                sensors[key] = obj;
         }
 
         void register_textSensor(text_sensor::TextSensor *obj, const std::string& key) {
-            textSensors[key] = obj;
+            if (obj != nullptr) 
+                textSensors[key] = obj;
         }
 
         void register_binarySensor(binary_sensor::BinarySensor *obj, const std::string& key) {
-            binarySensors[key] = obj;
+            if (obj != nullptr) {
+                obj->publish_state(false);
+                binarySensors[key] = obj;
+            }
         }
 
         void enable_request_code_sensors() {
@@ -88,9 +105,6 @@ namespace ecodan
     private:
         uart::UARTComponent *uart_ = nullptr;
         uart::UARTComponent *proxy_uart_ = nullptr;
-        Message res_buffer_;
-        Message proxy_buffer_;
-        int rx_sync_fail_count = 0;
         uint8_t initialCount = 0;
 
         Status status;
@@ -104,13 +118,20 @@ namespace ecodan
         Status::REQUEST_CODE activeRequestCode = Status::REQUEST_CODE::NONE;
 
         std::optional<CONTROLLER_FLAG> serverControlFlagBeforeLockout = {};
-        std::queue<Message> cmdQueue;
+        std::queue<QueuedCommand> cmdQueue;
 
-        bool serial_rx(uart::UARTComponent *uart, Message& msg, bool count_sync_errors = false);
-        bool serial_tx(uart::UARTComponent *uart, Message& msg);
+        std::atomic<std::chrono::steady_clock::time_point> last_proxy_activity_;
+        TaskHandle_t serial_io_task_handle_ = nullptr;
+        QueueHandle_t rx_message_queue_ = nullptr;
+        SemaphoreHandle_t uart_tx_mutex_ = nullptr;
+
+        bool serial_tx(Message& msg);
         
         bool disconnect();
         void reset_connection() {
+            if (proxy_available())
+                return;
+
             connected = false;
             initialCount = 0;
             disconnect();
@@ -129,6 +150,12 @@ namespace ecodan
 
         void proxy_ping();
         bool proxy_available();
+        void serial_io_task();
+        void process_serial_byte(uint8_t byte, Message& buffer, bool is_proxy_message);
+        
+        static void serial_io_task_trampoline(void *arg) {
+            static_cast<EcodanHeatpump*>(arg)->serial_io_task();
+        };
     };
 
     class EcodanClimate : public climate::Climate, public PollingComponent  {

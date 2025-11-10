@@ -38,6 +38,13 @@ This transforms your controller from a reactive system into a predictive one, en
 * **Solar Gain Compensation**: Applying a negative bias (e.g., `-0.7°C`) on a cold but sunny morning to prevent the system from overheating the house, letting the "free" energy from the sun do the work instead.
 
 ---
+## Predictive Short-Cycle Prevention
+
+This feature predicts imminent short cycles that can occur when the home's heat demand is lower than the heat pump's minimum power output.
+
+To mitigate this, the algorithm proactively adds a `+0.5°C` boost to the learned curve offset, forcing a higher feed temp. This action may cause a minor room temperature overshoot, which is then automatically corrected by the main auto-adaptive algorithm in subsequent learning cycles.
+
+---
 
 ## Configuration Parameters
 
@@ -47,25 +54,16 @@ All parameters are adjustable in real-time from the Home Assistant interface.
 | --------------------------------------------- | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | **`Auto-Adaptive: Control`** | **Enables or disables the entire Auto-Adaptive feature.** When disabled, the system will revert to using the standard fixed flow temperature setpoints. | **Default**: `On`                                                                                                                               |
 | **`Auto-Adaptive: Heating System Type`** | Tunes the algorithm's behavior to match your system's thermal inertia (response time). | **Default**: `Underfloor Heating`<br>• **UFH**: For slow, high-inertia systems.<br>• **UFH + Radiators**: For hybrid systems.<br>• **Radiators**: For fast, low-inertia systems. |
-| **`Auto-Adaptive: Heating Curve Slope`** | Determines how aggressively the flow temp rises as the outside temp drops.             | **Default**: `0.8`<br>• **Low (0.6-0.8)** for well-insulated homes with UFH.<br>• **High (1.2-1.6)** for older homes with radiators.          |
+| **`Auto-Adaptive: Heating Curve Slope`** | Determines how aggressively the flow temp rises as the outside temp drops.             | **Default**: `0.7`<br>• **Low (0.4-0.7)** for well-insulated homes with UFH.<br>• **High (0.8-1.2)** for older homes with radiators.          |
 | **`Auto-Adaptive: Cooling Curve Slope`** | Determines how aggressively the flow temp drops as the outside temp rises.             | **Default**: `1.2`<br>• **Low (0.8-1.2)** for homes with good sun protection.<br>• **High (1.8-2.5)** for homes with high solar gain.          |
 | **`Auto-Adaptive: Max. Heating Flow Temperature`**| Sets a hard safety limit for the flow temperature during heating to protect floors.      | **Default**: `38.0°C`                                                                                                                           |
 | **`Auto-Adaptive: Min. Cooling Flow Temperature`**| Sets a hard safety limit for the flow temperature during cooling to prevent condensation. | **Default**: `18.0°C`                                                                                                                           |
 | **`Auto-Adaptive: Cooling Smart Start Temp`** | Sets an "efficiency ceiling" for cooling. The system will never start cooling with a flow temperature *higher* than this value, preventing inefficient cycles on mild days. | **Default**: `19.0°C`<br>Must be ≥ `Min. Cooling Flow Temperature`. |
+| **`Auto-Adaptive: Thermostat Overshoot Compensation`** | Tells the algorithm to ignore a certain amount of overshoot caused by an external thermostat's own hysteresis. | **Default**: `0.0°C`<br>Set this to the known overshoot of your thermostat (e.g., `1.0°C`) to prevent incorrect learning. |
 | **`Auto-Adaptive: Setpoint Bias`** | Applies a temporary adjustment to the target temperature for proactive control. | **Default**: `0.0°C`<br>A range of **-1.5°C to +1.5°C** is effective for UFH, while **-2.5°C to +2.5°C** can be used for radiators. |
 | **`Auto-Adaptive: Room Temperature source`** | Selects the source for the **current** room temperature. The **target** temperature is always read from the active Ecodan thermostat. | **Default**: `Room Thermostat`<br>• **Room Thermostat**: Uses the current temperature from the Ecodan thermostat.<br>• **Rest API**: Overrides the current temperature with an external sensor. E.g.:<br>`curl -X POST "http://<esp_ip>/number/temperature_feedback/set?value=21.5"`|
 
 ---
-
-## Fine-Tuning Initial Values in YAML
-
-While the system learns automatically, providing a good starting point in your YAML configuration is crucial for immediate efficiency. This is especially true for the **`heating_curve_offset`**, which is the baseline for the heating curve.
-
-| System Type                      | Recommended `initial_value` for `heating_curve_offset` |
-| -------------------------------- | -------------------------------------------------------- |
-| **Underfloor Heating** | `23.0` (More efficient for well-insulated homes)       |
-| **Underfloor Heating + Radiators** | `26.0` (A good intermediate value)                       |
-| **Radiators** | `30.0` (A common baseline for radiator systems)          |
 
 # Getting Started with Auto-Adaptive Control
 
@@ -77,7 +75,7 @@ This guide assumes a common scenario where an external room thermostat (like a T
 
 ### Step 2: Set Up the Temperature Feedback Loop
 
-The Auto-Adaptive algorithm needs to know the **current temperature** being measured by your external thermostat. You must send this value back to the ESPHome controller.
+The Auto-Adaptive algorithm needs to know the **current temperature** being measured by your external thermostat. You must send this value back to the ESPHome controller. If you are using a mitsubishi wireless thermostat or [esphome-ecodan-remote-thermostat](https://github.com/gekkekoe/esphome-ecodan-remote-thermostat), you can skip the rest of this section and step 3.
 
 You can do this in two ways:
 
@@ -86,30 +84,29 @@ You can do this in two ways:
 
 Example REST API call to set the feedback temperature to 21.5°C:
 ```bash
-curl -X POST "http://<esp_ip>/number/temperature_feedback_z1/set?value=21.5"
-curl -X POST "http://<esp_ip>/number/temperature_feedback_z2/set?value=21.5" # only for 2 zones
+curl -X POST "http://esp_ip/number/auto-adaptive__current_room_temperature_feedback_z1/set?value=21.5" -d ""
+curl -X POST "http://esp_ip/number/auto-adaptive__current_room_temperature_feedback_z2/set?value=22.0" -d "" # only for 2 zones
 ```
 
 Example Home Assistent automation:
 ```yaml
 - id: SyncTemperatureToAdaptiveController
   alias: Sync Room Temp to Auto-Adaptive Controller
+  description: "Ensures the heat pump's feedback value matches the kantoor current temp"
   trigger:
-    - trigger: state
-      entity_id: climate.kantoor # Replace with your main thermostat
-      attribute: current_temperature
-  condition:
-    - condition: template
-      value_template:
-        "{{ trigger.from_state.attributes.current_temperature != trigger.to_state.attributes.current_temperature
-        }}"
+    - platform: template
+      value_template: >-
+        {{ state_attr('climate.kantoor', 'current_temperature') | float(0) !=
+          states('number.ecodan_heatpump_auto_adaptive_current_room_temperature_feedback_z1') | float(0) }}
+  condition: []
   action:
-    - action: number.set_value
+    - service: number.set_value
       target:
-        entity_id: number.ecodan_heatpump_auto_adaptive_current_room_temperature_feedback_z1 # also add z2 if you have 2 zones
+        entity_id: >-
+          number.ecodan_heatpump_auto_adaptive_current_room_temperature_feedback_z1
       data:
-        value: "{{ state_attr('climate.kantoor', 'current_temperature') }}" # Replace with your main thermostat 
-
+        value: "{{ state_attr('climate.kantoor', 'current_temperature') | float(0) }}"
+  mode: single
 ```
 
 Put the automation in a file `automations.yaml` and include that file in the main home assistant `configuration.yaml`.
@@ -118,17 +115,76 @@ automation: !include automations.yaml
 ```
 Restart HA, and the automation should be visible in Settings > Automations & scenes. 
 
-### Step 3: Configure Initial Parameters
+### Step 3: Set target temperatures (setpoint)
+If you are using an external thermostat, you need to adjust the Zone 1 and Zone 2 temperature climate entities to reflect the setpoint of that external thermostat. This probably does not change often and can be done manually once. If it does change often, you can use an automation similar to the one in the previous step to sync the setpoint.
+
+```yaml
+- id: SyncSetpointToAdaptiveController
+  alias: Sync Room Setpoint to Auto-Adaptive Controller
+  description: Ensures the heat pump setpoint always matches the main setpoint
+  trigger:
+    - platform: template
+      value_template: >-
+        {{ state_attr('climate.kantoor', 'temperature') | float(0) | round(1) !=
+          state_attr('climate.ecodan_heatpump_zone_1_room_temp', 'temperature') | float(0) | round(1) }}
+  condition: []
+  action:
+    - service: climate.set_temperature 
+      target:
+        entity_id: climate.ecodan_heatpump_zone_1_room_temp
+      data:
+        temperature: "{{ state_attr('climate.kantoor', 'temperature') | float(0) | round(1) }}"
+  mode: single
+        #temperature: "{{ (state_attr('climate.kantoor', 'temperature') * 2) | round(0) / 2.0 | float }}" if rounding to nearest half is needed
+```
+
+### Step 4: Set Outside temperature source (Optional)
+If you want to use an external outside temperature sensor, then select the HA / REST API option.
+
+```yaml
+- id: SyncOutsideTemperatureToAdaptiveController
+  alias: 'Sync Outside Temperature to Auto-Adaptive Controller'
+  description: ''
+  # trigger on change of these sensors
+  triggers:
+    - entity_id: sensor.buienradar_temperature
+      trigger: state
+    - entity_id: sensor.ecodan_heatpump_outside_temp
+      trigger: state
+    - entity_id: number.ecodan_heatpump_auto_adaptive_outside_temperature_feedback
+      trigger: state
+  variables:
+    source_temp: >-
+      {% set buienradar = states('sensor.buienradar_temperature') %} 
+      {% set ecodan = states('sensor.ecodan_heatpump_outside_temp') %} 
+      {% set source = buienradar if buienradar not in ['unknown', 'unavailable', 'none'] else ecodan %} 
+      {{ source | float(0) | round(1) }}
+    destination_temp: >-
+      {{
+      states('number.ecodan_heatpump_auto_adaptive_outside_temperature_feedback')
+      | float(0) | round(1) }}
+  conditions:
+    - condition: template
+      value_template: "{{ source_temp != destination_temp }}"
+  actions:
+    - target:
+        entity_id: number.ecodan_heatpump_auto_adaptive_outside_temperature_feedback
+      data:
+        value: "{{ source_temp }}"
+      action: number.set_value
+  mode: single
+```
+
+### Step 5: Configure Initial Parameters
 
 In Home Assistant, navigate to your dashboard and set the initial parameters for the controller on the **"Auto-Adaptive Settings"** tab.
 
-
-
 1.  **Set the Heating System Profile**: Choose the option from the `Auto-Adaptive: Heating System Type` dropdown that best matches your home (`Underfloor Heating`, `Underfloor Heating + Radiators`, or `Radiators`).
-2.  **Set the Heating Curve Slope**: Adjust the `Auto-Adaptive: Heating Curve Slope` slider. A good starting point for underfloor heating is `0.7`-`0.8`, while radiators often need a steeper slope like `1.4`-`1.6`.
+2.  **Set the Heating Curve Slope**: Adjust the `Auto-Adaptive: Heating Curve Slope` slider. A good starting point for underfloor heating is `0.4`-`0.7`, while radiators often need a steeper slope like `0.8`-`1.2`.
 3.  **Set Safety Limits**: Adjust the `Auto-Adaptive: Max. Heating Flow Temperature` slider to a value that is safe for your floors (e.g., `38.0°C` for UFH). Do the same for the cooling limits.
+4.  **Set Thermostat Overshoot Compensation (optional)**: Adjust the `Auto-Adaptive: Thermostat Overshoot Compensation` slider to match the known behavior of your thermostat. For example, the official Mitsubishi wireless thermostat has an  overshoot of 1.0°C, so you would set this slider to 1.0.
 
-### Step 4: Activate the System
+### Step 6: Activate the System
 
 Now you are ready to let the algorithm take control.
 

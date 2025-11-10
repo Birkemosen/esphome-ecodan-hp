@@ -3,8 +3,35 @@
 namespace esphome {
 namespace ecodan 
 { 
+
+    EcodanHeatpump::EcodanHeatpump() : PollingComponent() {
+        // ring buffer for messages from the uart port
+        this->rx_message_queue_ = xQueueCreate(10, sizeof(Message));
+        if (this->rx_message_queue_ == nullptr) {
+            ESP_LOGE(TAG, "Could not create rx_message_queue");
+        }
+
+        // write mutex uart tx
+        this->uart_tx_mutex_ = xSemaphoreCreateMutex();
+        if (this->uart_tx_mutex_ == nullptr) {
+            ESP_LOGE(TAG, "Could not create uart_tx_mutex");
+        }
+    }
+
     void EcodanHeatpump::setup() {
         heatpumpInitialized = initialize();
+        this->last_proxy_activity_ = std::chrono::steady_clock::now();
+
+        int main_core_id = xPortGetCoreID();
+        int other_core_id = 1 - main_core_id;
+
+        // background serial io handler
+        xTaskCreatePinnedToCore(
+            serial_io_task_trampoline,
+            "serial_io_task", 4096, this,
+            configMAX_PRIORITIES - 1, &this->serial_io_task_handle_,
+            other_core_id // pin to other core than esphome
+        );
     }
 
 
@@ -85,50 +112,21 @@ namespace ecodan
     {
         static auto last_response = std::chrono::steady_clock::now();
 
-        if (proxy_uart_ && proxy_uart_->available() > 0) {
-            proxy_ping();
-            if (serial_rx(proxy_uart_, proxy_buffer_, true))
-            {
-                // forward cmds from slave to master
-                if (uart_)
-                    uart_->write_array(proxy_buffer_.buffer(), proxy_buffer_.size());
-                proxy_buffer_ = Message();    
-            }
-
-            // if we could not get the sync byte after 4*packet size attemp, we are probably using the wrong baud rate
-            if (rx_sync_fail_count > 4*16) {
-                //swap 9600 <-> 2400
-                int current_baud = proxy_uart_->get_baud_rate(); 
-                int new_baud =  current_baud == 2400 ? 9600 : 2400;
-                ESP_LOGE(TAG, "Could not get sync byte, swapping baud from '%d' to '%d' for slave...", current_baud, new_baud);
-                proxy_uart_->flush();
-                proxy_uart_->set_baud_rate(new_baud);
-                proxy_uart_->load_settings();
-                
-                // reset fail count
-                rx_sync_fail_count = 0;
-            }
-        }
-
-        if (serial_rx(uart_, res_buffer_))
-        {
+        static Message received_message;
+        // Get messages from queue
+        while (xQueueReceive(this->rx_message_queue_, &received_message, (TickType_t)0) == pdTRUE) {
             last_response = std::chrono::steady_clock::now();
-            if (proxy_available())
-                proxy_uart_->write_array(res_buffer_.buffer(), res_buffer_.size());
-            
-            // interpret message
-            handle_response(res_buffer_);
-            res_buffer_ = Message();
+            handle_response(received_message);
+            received_message.reset();
         }
-
+        
         auto now = std::chrono::steady_clock::now();
-        if (now - last_response > std::chrono::minutes(2))
+        if (now - last_response > std::chrono::seconds(90))
         {
             last_response = now;
             reset_connection();
             ESP_LOGW(TAG, "No reply received from the heatpump in the last 2 minutes, going to reconnect...");
         }
-    
     }
 
     void EcodanHeatpump::handle_loop()

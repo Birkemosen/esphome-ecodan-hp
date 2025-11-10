@@ -1,3 +1,9 @@
+substitutions:
+  uart_rx_pin: 38
+  uart_tx_pin: 39
+  uart_proxy_rx_pin: 8
+  uart_proxy_tx_pin: 7
+
 esphome:
   name: ${name}
   friendly_name: ${friendlyName}
@@ -15,16 +21,19 @@ esp32:
     sdkconfig_options:
       COMPILER_OPTIMIZATION_SIZE: y
       CONFIG_BT_ENABLED: n
+      CONFIG_FREERTOS_USE_TRACE_FACILITY: y
+      CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS: y
+      CONFIG_FREERTOS_USE_STATS_FORMATTING_FUNCTIONS: y
 
 uart:
   - id: uart_ecodan
     rx_pin:
-      number: GPIO38
+      number: GPIO${uart_rx_pin}
       mode:
         input: true
         pullup: true
     tx_pin:
-      number: GPIO39
+      number: GPIO${uart_tx_pin}
       mode:
         output: true
     baud_rate: 2400
@@ -40,15 +49,15 @@ uart:
 
   - id: uart_proxy
     rx_pin:
-      number: GPIO8
+      number: GPIO${uart_proxy_rx_pin}
       mode:
         input: true
         pullup: true
     tx_pin:
-      number: GPIO7
+      number: GPIO${uart_proxy_tx_pin}
       mode:
         output: true
-    baud_rate: 9600
+    baud_rate: 2400
     parity: EVEN
     stop_bits: 1
     debug:
@@ -73,3 +82,5 @@ sensor:
   - platform: internal_temperature
     name: ${internal_esp_temperature}
     entity_category: diagnostic
+    unit_of_measurement: "°C"
+    device_class: temperature
