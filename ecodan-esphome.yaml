@@ -25,11 +25,10 @@ api:
 # - source:
 #     type: local
 #     path: components
-#   components: [ ecodan ]
+#   components: [ ecodan, optimizer ]
 
 # packages:
 #  base: !include confs/base.yaml # required
-#  shortcycle: !include confs/short-cycle.yaml
 #  adaptive: !include confs/auto-adaptive.yaml
 #  req: !include confs/request-codes.yaml 
 #  esp32: !include confs/esp32s3.yaml # esp32.yaml for regular board
@@ -50,7 +49,7 @@ api:
 
 external_components:
   - source: github://gekkekoe/esphome-ecodan-hp@main
-    components: [ ecodan ]
+    components: [ ecodan, optimizer ]
     refresh: always
 
 packages:
@@ -61,7 +60,6 @@ packages:
     files: [ 
             confs/base.yaml,            # required
             confs/energy.yaml,            # required
-            confs/short-cycle.yaml,     # recommended
             confs/auto-adaptive.yaml,    # recommended
             confs/cpu-monitoring.yaml,    # recommended
             confs/request-codes.yaml,   # disable if your unit does not support request codes (service menu)
@@ -97,18 +95,16 @@ packages:
 
            ]
 
-# logger:
-#   level: DEBUG
-#   baud_rate: 115200
-#   logs:
-#     ecodan.component: WARN
-#     auto_adaptive: DEBUG
-#     predictive_short_cycle: DEBUG
-#     uart_debug: DEBUG
-
-
 logger:
+  level: DEBUG
   baud_rate: 115200
+  logs:
+    ecodan.component: WARN
+    auto_adaptive: DEBUG
+    short_cycle: DEBUG
+
+# logger:
+#   baud_rate: 115200
   # level: WARN
   #logs:
   #   auto_adaptive: DEBUG
@@ -125,6 +121,7 @@ logger:
 # Enable Web server.
 web_server:
   port: 80
+  local: true
   #ota: true
 
 ecodan:

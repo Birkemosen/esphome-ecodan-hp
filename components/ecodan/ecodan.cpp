@@ -22,15 +22,21 @@ namespace ecodan
         heatpumpInitialized = initialize();
         this->last_proxy_activity_ = std::chrono::steady_clock::now();
 
+        BaseType_t task_core_id;
+#if CONFIG_FREERTOS_UNICORE
+        task_core_id = 0;
+        ESP_LOGI(TAG, "Setup: Single Core detected. Serial task pinned to Core 0.");
+#else
         int main_core_id = xPortGetCoreID();
-        int other_core_id = 1 - main_core_id;
-
+        task_core_id = 1 - main_core_id;
+        ESP_LOGI(TAG, "Setup: Dual Core detected. Main running on Core %d. Serial task pinned to Core %d.", main_core_id, task_core_id);
+#endif
         // background serial io handler
         xTaskCreatePinnedToCore(
             serial_io_task_trampoline,
             "serial_io_task", 4096, this,
             configMAX_PRIORITIES - 1, &this->serial_io_task_handle_,
-            other_core_id // pin to other core than esphome
+            task_core_id // pin to other core than esphome if available
         );
     }
 
@@ -99,7 +105,7 @@ namespace ecodan
                 proxy_uart_->get_data_bits() != 8 ||
                 proxy_uart_->get_parity() != uart::UART_CONFIG_PARITY_EVEN) {
                 ESP_LOGI(TAG, "Proxy UART not configured for 2400/9600 8E1. This may not work...");
-            }            
+            }
         }
         else if (!is_connected()){
             begin_connect();
@@ -131,23 +137,28 @@ namespace ecodan
 
     void EcodanHeatpump::handle_loop()
     {        
-        if (!is_connected() && uart_ && !uart_->available())
+        if (!is_connected() && uart_)
         {
-            static auto last_attempt = std::chrono::steady_clock::now();
-            auto now = std::chrono::steady_clock::now();
-            if (now - last_attempt > std::chrono::seconds(5))
-            {
-                last_attempt = now;
-                if (!begin_connect())
+            if (proxy_available()) {
+                // re-use previous connect
+                dispatch_next_cmd();
+            }
+            else {
+                static auto last_attempt = std::chrono::steady_clock::now();
+                auto now = std::chrono::steady_clock::now();
+                if (now - last_attempt > std::chrono::seconds(5))
                 {
-                    ESP_LOGI(TAG, "Failed to start heatpump connection proceedure...");
-                }
-            }    
+                    last_attempt = now;
+                    if (!begin_connect())
+                    {
+                        ESP_LOGI(TAG, "Failed to start heatpump connection proceedure...");
+                    }
+                }    
+            }
         }
         else if (is_connected())
         {
             dispatch_next_cmd();
-
             if (!dispatch_next_status_cmd())
             {
                 ESP_LOGI(TAG, "Failed to begin heatpump status update!");

@@ -172,11 +172,16 @@ namespace ecodan
     climate::ClimateTraits EcodanClimate::traits() {
         auto traits = climate::ClimateTraits();
         // The capabilities of the climate device
-        traits.set_supports_two_point_target_temperature(false);
-        traits.set_supports_current_temperature(get_current_temp != nullptr);
-        traits.set_supports_action(true);
+        auto flag = esphome::climate::CLIMATE_SUPPORTS_ACTION;
+        if (get_current_temp != nullptr)
+            flag = flag | esphome::climate::CLIMATE_SUPPORTS_CURRENT_TEMPERATURE;
+
+        traits.add_feature_flags(flag);
+        //traits.set_supports_two_point_target_temperature(false);
+        //traits.set_supports_current_temperature(get_current_temp != nullptr);
+        //traits.set_supports_action(true);
         
-        if (this->dhw_climate_mode)  {
+        if (this->dhw_climate_mode) {
 
             traits.set_supported_modes({climate::CLIMATE_MODE_OFF, climate::CLIMATE_MODE_HEAT});
             traits.set_visual_min_temperature(40);
@@ -199,24 +204,41 @@ namespace ecodan
             //ESP_LOGE(TAG, "min: %f, max: %f", traits.get_visual_min_temperature(), traits.get_visual_max_temperature());
         }
         
-        traits.set_visual_target_temperature_step(0.5);
-        traits.set_visual_current_temperature_step(0.5);
+        traits.set_visual_target_temperature_step(this->dhw_climate_mode ? 0.5 : 0.1);
+        traits.set_visual_current_temperature_step(this->dhw_climate_mode ? 0.5 : 0.1);
 
         return traits;
     }
 
+    void EcodanClimate::get_current_limits(float &min_limit, float &max_limit) {
+        if (this->dhw_climate_mode) {
+            //auto& status = this->get_status();
+            min_limit = 40; max_limit = 60;
+        } 
+        else if(this->thermostat_climate_mode) {
+            min_limit = 8; max_limit = 28;
+        }
+        else {
+            auto is_cooling = this->mode == climate::ClimateMode::CLIMATE_MODE_COOL;
+            min_limit = is_cooling ? 5 : 24;
+            max_limit = is_cooling ? 20 : 60;
+        }
+    }
+
     void EcodanClimate::validate_target_temperature() {
+
+        float min_limit, max_limit;
+        this->get_current_limits(min_limit, max_limit);
+
         if (std::isnan(this->target_temperature)) {
-            this->target_temperature =
-                ((this->get_traits().get_visual_max_temperature() - this->get_traits().get_visual_min_temperature()) / 2) +
-                this->get_traits().get_visual_min_temperature();
+            this->target_temperature = (max_limit - min_limit) / 2 + min_limit;
         } else {
             // target_temperature must be between the visual minimum and the visual maximum
-            if (this->target_temperature < this->get_traits().get_visual_min_temperature())
-                this->target_temperature = this->get_traits().get_visual_min_temperature();
+            if (this->target_temperature < min_limit)
+                this->target_temperature = min_limit;
 
-            if (this->target_temperature > this->get_traits().get_visual_max_temperature())
-                this->target_temperature = this->get_traits().get_visual_max_temperature();
+            if (this->target_temperature > max_limit)
+                this->target_temperature = max_limit;
         }
     }
 

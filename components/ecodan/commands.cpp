@@ -244,15 +244,15 @@ namespace ecodan
 
     #define MAX_SERVICE_CODE_CMD_SIZE 5
     ServiceCodeRuntime serviceCodeCmdQueue[MAX_SERVICE_CODE_CMD_SIZE] = {
-        ServiceCodeRuntime{Status::REQUEST_CODE::COMPRESSOR_STARTS, false, 30*60, std::chrono::steady_clock::now() - std::chrono::seconds(60*60)},
+        ServiceCodeRuntime{Status::REQUEST_CODE::COMPRESSOR_STARTS, false, 60*60, std::chrono::steady_clock::now() - std::chrono::seconds(60*60)},
         ServiceCodeRuntime{Status::REQUEST_CODE::TH4_DISCHARGE_TEMP, true, 0, std::chrono::steady_clock::time_point{}},
         ServiceCodeRuntime{Status::REQUEST_CODE::TH3_LIQUID_PIPE1_TEMP, true, 0, std::chrono::steady_clock::time_point{}},
-        ServiceCodeRuntime{Status::REQUEST_CODE::TH6_2_PHASE_PIPE_TEMP, true, 0, std::chrono::steady_clock::time_point{}},
+        //ServiceCodeRuntime{Status::REQUEST_CODE::TH6_2_PHASE_PIPE_TEMP, true, 0, std::chrono::steady_clock::time_point{}},
         //ServiceCodeRuntime{Status::REQUEST_CODE::TH32_SUCTION_PIPE_TEMP, true, 0, std::chrono::steady_clock::time_point{}},
         //ServiceCodeRuntime{Status::REQUEST_CODE::TH8_HEAT_SINK_TEMP, true, 0, std::chrono::steady_clock::time_point{}},
-        //ServiceCodeRuntime{Status::REQUEST_CODE::DISCHARGE_SUPERHEAT, true, 0, std::chrono::steady_clock::time_point{}},
+        ServiceCodeRuntime{Status::REQUEST_CODE::DISCHARGE_SUPERHEAT, true, 0, std::chrono::steady_clock::time_point{}},
         //ServiceCodeRuntime{Status::REQUEST_CODE::SUB_COOL, true, 0, std::chrono::steady_clock::time_point{}},
-        ServiceCodeRuntime{Status::REQUEST_CODE::FAN_SPEED, false, 0, std::chrono::steady_clock::time_point{}}
+        ServiceCodeRuntime{Status::REQUEST_CODE::FAN_SPEED, false, 2*60, std::chrono::steady_clock::time_point{}}
     };
 
     bool EcodanHeatpump::dispatch_next_status_cmd()
@@ -330,25 +330,25 @@ namespace ecodan
 
     bool EcodanHeatpump::dispatch_next_cmd()
     {
-
         if (cmdQueue.empty())
         {
             return true;
         }
         
         QueuedCommand& pending_cmd = cmdQueue.front();
-        const unsigned long CMD_TIMEOUT_MS = 2*1000;
+        const unsigned long CMD_TIMEOUT_MS = 1000;
+        const uint8_t MAX_RETRIES = 30;
         if (pending_cmd.last_sent_time != 0 && (millis() - pending_cmd.last_sent_time < CMD_TIMEOUT_MS)) {
             return true;
         }
-        if (pending_cmd.retries >= 10) {
-            ESP_LOGE(TAG, "Command failed after 10 retries. Discarding.");
+        if (pending_cmd.retries >= MAX_RETRIES) {
+            ESP_LOGE(TAG, "Command failed after %d retries. Discarding.", MAX_RETRIES);
             cmdQueue.pop();
             return true;
         }
 
         if (pending_cmd.last_sent_time != 0) {
-            ESP_LOGW(TAG, "Command timed out. Retrying (attempt %d/10)...", pending_cmd.retries + 1);
+            ESP_LOGW(TAG, "Command timed out. Retrying (attempt %d/%d)...[%d]", pending_cmd.retries + 1, MAX_RETRIES, cmdQueue.size());
         }
 
         if (!serial_tx(pending_cmd.message)) {

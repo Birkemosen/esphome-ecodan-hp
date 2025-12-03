@@ -22,7 +22,7 @@ The remote thermostat protocol CNRF is supported by [esphome-ecodan-remote-therm
 | Auto Adaptive Control | Automatically adjust flow temps to maintain room temp. (Self learning and fine tuning) [Documentation](https://github.com/gekkekoe/esphome-ecodan-hp/blob/main/docs/auto-adaptive.md) |
 
 
-\* <sup><i>These features are not available in proxy, since we are observing only the ESP metrics</i></sup>
+\* <sup><i>These features are not available in proxy, since we are observing only. Newer FTC7 will report the `Outdoor unit thermistors`.</i></sup>
 
 # Available Languages
 Select the language in the `ecodan-esphome.yaml` file.  
@@ -43,11 +43,12 @@ Select the language in the `ecodan-esphome.yaml` file.
 
 If you want to contribute a translation: copy the file `ecodan-labels-en.yaml` to `ecodan-labels-xx.yaml` (replace `xx` with your language code), fill in all the labels, and submit a pull request.
 
-# Links
+# Getting Started
 * [Recommended hardware](https://github.com/gekkekoe/esphome-ecodan-hp/blob/main/docs/hardware.md)
 * [Recommended hardware for proxy setup](https://github.com/gekkekoe/esphome-ecodan-hp/blob/main/docs/proxy.md)
 * [Install from prebuilt binaries](https://github.com/gekkekoe/esphome-ecodan-hp/blob/main/docs/install-from-bin.md)
 * [Build from source](https://github.com/gekkekoe/esphome-ecodan-hp/blob/main/docs/build-from-source.md)
+* [How to setup auto adaptive](https://github.com/gekkekoe/esphome-ecodan-hp/blob/main/docs/auto-adaptive.md#getting-started-with-auto-adaptive-control)
 
 # Result
 Here's how it's connected inside the heatpump:

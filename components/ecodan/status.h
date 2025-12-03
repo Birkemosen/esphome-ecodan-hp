@@ -10,7 +10,7 @@ namespace ecodan
     {
         bool Initialized = false;
 
-        bool DefrostActive;
+        bool DefrostActive{false};
         bool DhwForcedActive;        
         bool BoosterActive;
         bool Booster2Active;
@@ -33,18 +33,18 @@ namespace ecodan
         float DhwTemperatureDrop;
         uint8_t MaximumFlowTemperature;
         uint8_t MinimumFlowTemperature;
-        float OutsideTemperature;
-        float HpFeedTemperature {0.0f};
-        float HpReturnTemperature {0.0f};
-        float Z1FeedTemperature;
-        float Z1ReturnTemperature;
-        float Z2FeedTemperature;
-        float Z2ReturnTemperature;
+        float OutsideTemperature{NAN};
+        float HpFeedTemperature{NAN};
+        float HpReturnTemperature{NAN};
+        float Z1FeedTemperature{NAN};
+        float Z1ReturnTemperature{NAN};
+        float Z2FeedTemperature{NAN};
+        float Z2ReturnTemperature{NAN};
         float MixingTankTemperature;
         float HpRefrigerantLiquidTemperature;
         float HpRefrigerantCondensingTemperature;
         float DhwTemperature{NAN};
-        float DhwSecondaryTemperature;
+        float DhwSecondaryTemperature{NAN};
         float BoilerFlowTemperature;
         float BoilerReturnTemperature;
         uint8_t FlowRate {0};
@@ -183,6 +183,10 @@ namespace ecodan
         float RcSubCoolTemp;
         uint16_t RcFanSpeedRpm;
 
+        // Configured thermostat
+        uint8_t MasterZone1 = 0x0;
+        uint8_t MasterZone2 = 0x0;
+
         int day_of_year() const {
             if (ControllerDateTime.tm_year < 100)
                 return -1;
@@ -207,12 +211,17 @@ namespace ecodan
             if (IS_BIT_SET(DipSwitch3, 5) && !IS_BIT_SET(DipSwitch2, 6)) // SW3-6 True, SW2-7 False
                 return false; //z1, z2 -> same flow
             else if (IS_BIT_SET(DipSwitch2, 5) || IS_BIT_SET(DipSwitch2, 6)) // SW2-6 or SW2-7 True
-                return true; 
+                return true; // z1, z2 -> independent flows
             return false;
         }
 
         bool has_2zones() const {
-            return IS_BIT_SET(DipSwitch2, 6);
+            if (IS_BIT_SET(DipSwitch3, 5) && !IS_BIT_SET(DipSwitch2, 6)) // SW3-6 True, SW2-7 False
+                return true; // z1, z2 -> same flow
+            if (IS_BIT_SET(DipSwitch2, 5) || IS_BIT_SET(DipSwitch2, 6)) // SW2-6 or SW2-7 True
+                return true; // z1, z2 -> independent flows
+            
+            return false;
         }
 
         CONTROLLER_FLAG get_svc_flags() const
