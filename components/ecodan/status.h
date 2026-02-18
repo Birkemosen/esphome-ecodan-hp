@@ -40,7 +40,7 @@ namespace ecodan
         float Z1ReturnTemperature{NAN};
         float Z2FeedTemperature{NAN};
         float Z2ReturnTemperature{NAN};
-        float MixingTankTemperature;
+        float MixingTankTemperature{NAN};
         float HpRefrigerantLiquidTemperature;
         float HpRefrigerantCondensingTemperature;
         float DhwTemperature{NAN};
@@ -63,6 +63,8 @@ namespace ecodan
         uint8_t MixingValveStatus;
         uint8_t MixingValveStep;
         uint8_t MultiZoneStatus;
+        // FTC7 has z1 mixing valve
+        uint8_t MixingValveStepZ1;
 
         // error codes
         uint8_t RefrigerantErrorCode;
@@ -76,6 +78,7 @@ namespace ecodan
         uint8_t DipSwitch4{0};
         uint8_t DipSwitch5{0};
         uint8_t DipSwitch6{0};
+        uint8_t DipSwitch7{0};
 
         // refrigerant code
         uint8_t RefrigerantCode = 255;
@@ -207,18 +210,20 @@ namespace ecodan
             return IS_BIT_SET(DipSwitch2, 3);
         }
 
-        bool has_independent_z2() const {
-            if (IS_BIT_SET(DipSwitch3, 5) && !IS_BIT_SET(DipSwitch2, 6)) // SW3-6 True, SW2-7 False
-                return false; //z1, z2 -> same flow
-            else if (IS_BIT_SET(DipSwitch2, 5) || IS_BIT_SET(DipSwitch2, 6)) // SW2-6 or SW2-7 True
-                return true; // z1, z2 -> independent flows
-            return false;
+        bool has_mixing_tank() const {
+            // SW2-6
+            return IS_BIT_SET(DipSwitch2, 5);
+        }
+
+        bool has_independent_zone_temps() const {
+            //  SW2-7 is only valid active when SW3-6 is off
+            return has_mixing_tank() || (IS_BIT_SET(DipSwitch2, 6) && !IS_BIT_SET(DipSwitch3, 5));
         }
 
         bool has_2zones() const {
             if (IS_BIT_SET(DipSwitch3, 5) && !IS_BIT_SET(DipSwitch2, 6)) // SW3-6 True, SW2-7 False
                 return true; // z1, z2 -> same flow
-            if (IS_BIT_SET(DipSwitch2, 5) || IS_BIT_SET(DipSwitch2, 6)) // SW2-6 or SW2-7 True
+            if (IS_BIT_SET(DipSwitch2, 5) && IS_BIT_SET(DipSwitch2, 6)) // SW2-6 or SW2-7 True
                 return true; // z1, z2 -> independent flows
             
             return false;

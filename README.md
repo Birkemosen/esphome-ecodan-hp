@@ -1,9 +1,14 @@
 # ESPHome Ecodan heatpump
 ESPHome implementation of the CN105 protocol. It can operate as standalone or with slave (Melcloud/Procon) attached. It includes server control mode, realtime power output estimation, and realtime daily energy counters.
 
-The remote thermostat protocol CNRF is supported by [esphome-ecodan-remote-thermostat](https://github.com/gekkekoe/esphome-ecodan-remote-thermostat). It implements a virtual thermostat that can be linked with any temperature sensor.
+The remote thermostat protocol CNRF is supported by [esphome-ecodan-remote-thermostat](https://github.com/gekkekoe/esphome-ecodan-remote-thermostat). It implements a virtual thermostat that can be linked with any temperature sensor. Alternatively the [Asgard PCB](https://github.com/gekkekoe/esphome-ecodan-hp/blob/main/asgard/README.md) supports a higher resolution virtual thermostat.
 
-![image](https://github.com/gekkekoe/esphome-ecodan-hp/blob/main/img/ha-integration.png?raw=true)
+### Home Assistant Dashboard
+![HA Dashboard](img/ha-integration.png) 
+
+### Stand alone [Dashboard](http://ecodan-heatpump.local/dashboard)
+![Stand Alone Mode](img/asgard-standalone.png) 
+
 
 # Features
 
@@ -20,9 +25,14 @@ The remote thermostat protocol CNRF is supported by [esphome-ecodan-remote-therm
 | Updates | OTA updates available when using the default recommended hardware |
 | Short cycle detection & mitigation | Protects your heat pump from excessive on/off cycling. [Documentation](https://github.com/gekkekoe/esphome-ecodan-hp/blob/main/docs/short-cycle-mitigation.md) |
 | Auto Adaptive Control | Automatically adjust flow temps to maintain room temp. (Self learning and fine tuning) [Documentation](https://github.com/gekkekoe/esphome-ecodan-hp/blob/main/docs/auto-adaptive.md) |
-
+| One wire** | Allow 4 high resolution DS18x20 temperature sensors to be used |
+| Virtual Thermostat** | A software thermostat that controls IN1/IN6. This can replace CNRF, but allows 0.1c temp resolution |
+| Stand alone mode** | Can run without Home Assistant providing basic controls and Auto Adaptive Control |
 
 \* <sup><i>These features are not available in proxy, since we are observing only. Newer FTC7 will report the `Outdoor unit thermistors`.</i></sup>
+
+\*\* <sup><i>These features are only available with the Asgard PCB (requires hardware)</i></sup>
+
 
 # Available Languages
 Select the language in the `ecodan-esphome.yaml` file.  
@@ -53,7 +63,7 @@ If you want to contribute a translation: copy the file `ecodan-labels-en.yaml` t
 # Result
 Here's how it's connected inside the heatpump:
 
-![image](https://github.com/gekkekoe/esphome-ecodan-hp/blob/main/img/m5stack_installed.jpg?raw=true)
+![image](https://github.com/gekkekoe/esphome-ecodan-hp/blob/main/img/asgard-installed.png?raw=true)
 
 
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/gekkekoe)

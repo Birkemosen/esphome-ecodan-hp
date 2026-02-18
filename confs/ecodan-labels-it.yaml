@@ -29,14 +29,14 @@ substitutions:
   heatpump_switch_holiday: Modalità Vacanza
   wifi_signal_proc: WiFi Segnale %
   wifi_signal_db: WiFi Segnale dB
-  z1_flow_temp_target: Z1 C/F T. Mandata
+  z1_flow_temp_target: Z1 T. Mandata
   status_prohibit_cool_z1: Z1 Raff. Proibito
   status_prohibit_heating_z1: Z1 Risc. Proibito
   heatpump_climate_z1: Zona 1 Temp. Mandata
   heatpump_climate_room_z1: Zona 1 Temp. Ambiente
   z1_room_temp_target: Z1 T. Ambiente Desiderata
   z1_room_temp: Z1 T. Ambiente
-  heatpump_number_z2_set_flow_temperature: Z2 C/F Mandata
+  heatpump_number_z2_set_flow_temperature: Z2 Mandata
   z2_flow_temp_target: Z2 C/F T. Mandata
   status_prohibit_cool_z2: Z2 Raff. Proibito
   status_prohibit_heating_z2: Z2 Risc. Proibito
@@ -144,6 +144,7 @@ substitutions:
   temperature_feedback_source: 'Autoadattivo: Fonte Temperatura Ambiente'
   temperature_feedback_option_room: 'Termostato Ambiente'
   select_feedback_option_api: 'Home Assistant / REST API'
+  select_feedback_option_asgard_vt: 'Termostato Virtuale Asgard'
   heating_system_type: 'Autoadattivo: Tipo di Impianto'
   heating_system_type_option_ufh: 'Riscaldamento a Pavimento'
   heating_system_type_option_ufh_rad: 'Riscaldamento a Pavimento + Radiatori'
@@ -151,6 +152,7 @@ substitutions:
   auto_adaptive_setpoint_bias: 'Autoadattivo: Bias del Setpoint'
   temperature_feedback: 'Autoadattivo: Feedback Temperatura Ambiente Attuale'
   defrost_risk_handling_enabled: 'Autoadattivo: Mitigazione Sbrinamento'
+  smart_boost_enabled: 'Autoadattivo: Boost Intelligente'
   total_increasing_heating_consumed: Consumo Totale Riscaldamento
   total_increasing_heating_delivered: Energia Totale Prodotta Riscaldamento
   total_increasing_cool_consumed: Consumo Totale Raffrescamento
@@ -161,3 +163,9 @@ substitutions:
   pump_feedback: 'Consumo Pompa'
   pump_feedback_status: 'Stato Feedback Pompa'
   master_thermostat: 'Sensore Ambiente Master'
+
+  solver_kwh_meter_feedback_source: "Fonte contatore"
+  solver_kwh_meter_option_internal: "Contatore interno"
+  solver_kwh_meter_feedback: "Feedback contatore kWh"
+
+  asgard_vt_temp_sensor_source: 'Sorgente Termostato Virtuale'

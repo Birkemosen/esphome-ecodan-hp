@@ -13,6 +13,7 @@
 #include "esphome/components/sensor/sensor.h"
 #include "esphome/components/text_sensor/text_sensor.h"
 #include "esphome/components/binary_sensor/binary_sensor.h"
+#include "esphome/components/thermostat/thermostat_climate.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -67,6 +68,7 @@ namespace ecodan
         }
 
         // exposed as external component commands
+        void set_ignore_slave_cmd(bool ignoreCmds) { ignoreSlaveCMDs = ignoreCmds; };
         void set_room_temperature(float value, esphome::ecodan::Zone zone);
         void set_flow_target_temperature(float value, esphome::ecodan::Zone zone);
         void set_dhw_target_temperature(float value);
@@ -106,6 +108,8 @@ namespace ecodan
         uart::UARTComponent *uart_ = nullptr;
         uart::UARTComponent *proxy_uart_ = nullptr;
         uint8_t initialCount = 0;
+        bool slaveDetected = false;
+        bool ignoreSlaveCMDs = false;
 
         Status status;
         float temperatureStep = 0.5f;
@@ -188,6 +192,41 @@ namespace ecodan
         void get_current_limits(float &min_limit, float &max_limit);
         std::chrono::time_point<std::chrono::steady_clock> last_update;
     };    
+
+    class EcodanVirtualThermostat : public thermostat::ThermostatClimate {
+    public:
+        void control(const climate::ClimateCall &call) override {
+
+            if (call.get_target_temperature().has_value()) {
+                this->target_temperature = *call.get_target_temperature();
+            }
+            if (!std::isnan(this->target_temperature)) {
+                this->target_temperature_low = this->target_temperature;
+                this->target_temperature_high = this->target_temperature;
+            }
+            thermostat::ThermostatClimate::control(call);  
+        };
+
+        climate::ClimateTraits traits() override {
+            auto traits = thermostat::ThermostatClimate::traits();
+            traits.clear_feature_flags(climate::CLIMATE_SUPPORTS_TWO_POINT_TARGET_TEMPERATURE);
+            traits.add_feature_flags(climate::CLIMATE_SUPPORTS_ACTION);
+            traits.add_feature_flags(climate::CLIMATE_SUPPORTS_CURRENT_TEMPERATURE);
+
+            traits.set_supported_modes({
+                climate::CLIMATE_MODE_OFF,
+                climate::CLIMATE_MODE_HEAT,
+                climate::CLIMATE_MODE_COOL
+            });
+
+            traits.set_visual_min_temperature(8);
+            traits.set_visual_max_temperature(28);
+            traits.set_visual_target_temperature_step(0.1);
+            traits.set_visual_current_temperature_step(0.1);
+
+            return traits;
+        }
+    };
 
 } // namespace ecodan
 } // namespace esphome

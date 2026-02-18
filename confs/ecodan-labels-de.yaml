@@ -118,12 +118,12 @@ substitutions:
   wifi_signal_db: WiFi-Signal dB
   wifi_signal_proc: WiFi-Signal %
   z1_feed_temp: Z1 Vorlauftemperatur
-  z1_flow_temp_target: Zone 1 Heizen/Kühlen Sollwert
+  z1_flow_temp_target: Zone 1 Sollwert
   z1_return_temp: Z1 Rücklauftemperatur
   z1_room_temp: Zone 1 Raumtemperatur
   z1_room_temp_target: Zone 1 Raum-Sollwert
   z2_feed_temp: Z2 Vorlauftemperatur
-  z2_flow_temp_target: Zone 2 Heizen/Kühlen Sollwert
+  z2_flow_temp_target: Zone 2 Sollwert
   z2_return_temp: Z2 Rücklauftemperatur
   z2_room_temp: Zone 2 Raumtemperatur
   z2_room_temp_target: Zone 2 Raum-Sollwert
@@ -143,6 +143,7 @@ substitutions:
   temperature_feedback_source: 'Auto-Adaptiv: Quelle Raumtemperatur'
   temperature_feedback_option_room: 'Raumthermostat'
   select_feedback_option_api: 'Home Assistant / REST API'
+  select_feedback_option_asgard_vt: 'Asgard Virtuelles Thermostat'
   heating_system_type: 'Auto-Adaptiv: Typ des Heizsystems'
   heating_system_type_option_ufh: 'Fußbodenheizung'
   heating_system_type_option_ufh_rad: 'Fußbodenheizung + Heizkörper'
@@ -150,6 +151,7 @@ substitutions:
   auto_adaptive_setpoint_bias: 'Auto-Adaptiv: Sollwert-Bias'
   temperature_feedback: 'Auto-Adaptiv: Rückmeldung Aktuelle Raumtemperatur'
   defrost_risk_handling_enabled: 'Auto-Adaptiv: Abtau-Reduzierung'
+  smart_boost_enabled: 'Auto-Adaptiv: Intelligenter Boost'
   total_increasing_heating_consumed: Gesamtverbrauch Heizen
   total_increasing_heating_delivered: Gesamtertrag Heizen
   total_increasing_cool_consumed: Gesamtverbrauch Kühlen
@@ -160,3 +162,9 @@ substitutions:
   pump_feedback: 'Pumpenverbrauch'
   pump_feedback_status: 'Status Pumpen-Feedback'
   master_thermostat: 'Master-Raumsensor'
+
+  solver_kwh_meter_feedback_source: Energy Meter Source
+  solver_kwh_meter_option_internal: Internal Energy Meter
+  solver_kwh_meter_feedback: kWh meter feedback
+
+  asgard_vt_temp_sensor_source: 'Quelle Virtuelles Thermostat'

@@ -30,14 +30,14 @@ substitutions:
   heatpump_switch_holiday: Semesterläge kontroll
   wifi_signal_proc: WiFi-signal %
   wifi_signal_db: WiFi-signal dB
-  z1_flow_temp_target: Zon 1 H/C inställt värde
+  z1_flow_temp_target: Zon 1 inställt värde
   status_prohibit_cool_z1: Zon 1 kylning förbjudet
   status_prohibit_heating_z1: Zon 1 uppvärmning förbjudet
   heatpump_climate_z1: Zon 1 Framledningstemp
   heatpump_climate_room_z1: Zon 1 Rumstemp
   z1_room_temp_target: Zon 1 rum inställt värde
   z1_room_temp: Zon 1 rumstemperatur
-  heatpump_number_z2_set_flow_temperature: Zon 2 H/C inställning
+  heatpump_number_z2_set_flow_temperature: Zon 2 inställning
   z2_flow_temp_target: Zon 2 H/C inställt värde
   status_prohibit_cool_z2: Zon 2 kylning förbjudet
   status_prohibit_heating_z2: Zon 2 uppvärmning förbjudet
@@ -144,6 +144,7 @@ substitutions:
   temperature_feedback_source: 'Autoadaptiv: Källa för Rumstemperatur'
   temperature_feedback_option_room: 'Rumstermostat'
   select_feedback_option_api: 'Home Assistant / REST API'
+  select_feedback_option_asgard_vt: 'Asgard Virtuell Termostat'
   heating_system_type: 'Autoadaptiv: Typ av Värmesystem'
   heating_system_type_option_ufh: 'Golvvärme'
   heating_system_type_option_ufh_rad: 'Golvvärme + Radiatorer'
@@ -151,6 +152,7 @@ substitutions:
   auto_adaptive_setpoint_bias: 'Autoadaptiv: Börvärdes-bias'
   temperature_feedback: 'Autoadaptiv: Återkoppling Aktuell Rumstemperatur'
   defrost_risk_handling_enabled: 'Autoadaptiv: Avfrostningsreducering'
+  smart_boost_enabled: 'Autoadaptiv: Smart Boost'
   total_increasing_heating_consumed: Totalförbrukning Värme
   total_increasing_heating_delivered: Total Levererad Värme
   total_increasing_cool_consumed: Totalförbrukning Kyla
@@ -161,3 +163,9 @@ substitutions:
   pump_feedback: 'Pumpförbrukning'
   pump_feedback_status: 'Status Pumpåterkoppling'
   master_thermostat: 'Huvudrumsgivare'
+
+  solver_kwh_meter_feedback_source: "Källa för energimätare"
+  solver_kwh_meter_option_internal: "Intern energimätare"
+  solver_kwh_meter_feedback: "kWh-mätare återkoppling"
+
+  asgard_vt_temp_sensor_source: 'Källa Virtuell Termostat'

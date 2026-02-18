@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Asgard Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Space+Grotesk:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #0a0e1a; --bg2: #0f1525; --bg3: #151c30; --card: #131929; --border: #1e2d4a;
+    --accent: #00c8ff; --accent3: #7fff7f; --warn: #ffb020; --danger: #ff4455;
+    --purple: #c084fc; --text: #e2eaff; --text2: #8899bb; --text3: #4a5a7a;
+    --heat: #ff6b35; --cool: #00c8ff; --radius: 12px;
+    --mono: 'JetBrains Mono', monospace; --sans: 'Space Grotesk', sans-serif;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; padding: 0; }
+  
+  header { 
+    background: var(--bg2); border-bottom: 1px solid var(--border); 
+    padding: 10px 16px; display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; position: sticky; top: 0; z-index: 100; 
+  }
+
+  .header-badges { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
+  
+  .header-right {
+    display: flex; flex-direction: column; align-items: flex-end; justify-content: center;
+    font-family: var(--mono); font-size: 10px; color: var(--text3); min-width: 80px;
+  }
+  .fw-version { color: var(--accent); font-weight: 600; margin-bottom: 2px; }
+
+  .badge { display: flex; flex-direction: column; align-items: center; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 3px 8px; min-width: 52px; transition: border-color 0.2s; }
+  .badge:hover { border-color: var(--accent); }
+  .badge-label { 
+    display: flex; 
+    align-items: center; 
+    gap: 3px; 
+    font-size: 8px; 
+    font-weight: 600; 
+    letter-spacing: 1px;
+    color: var(--text3); 
+    text-transform: uppercase; 
+    white-space: nowrap; 
+  }
+  .badge-value { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; }
+  .badge-value.hot { color: var(--heat); }
+  .badge-value.cool { color: var(--cool); }
+  .badge-value.green { color: var(--accent3); }
+  .badge-value.warn { color: var(--warn); }
+  .badge-value.purple { color: var(--purple); }
+
+  main { padding: 14px; display: grid; grid-template-columns: 1fr; gap: 14px; max-width: 1300px; margin: 0 auto; }
+  .section-title { font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 3px; color: var(--text3); text-transform: uppercase; margin-bottom: 10px; padding-left: 8px; border-left: 2px solid var(--accent); }
+  .chart-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+  .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .chart-legend { display: flex; gap: 10px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 9px; font-family: var(--mono); color: var(--text2); }
+  .legend-dot { width: 16px; height: 2px; flex-shrink: 0; }
+  .chart-container { position: relative; width: 100%; height: 200px; }
+  canvas { width: 100% !important; }
+
+  .ctrl-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+  .ctrl-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--border); gap: 10px; }
+  .ctrl-row:last-of-type { border-bottom: none; }
+  .ctrl-label { font-size: 11px; color: var(--text2); flex: 1; }
+  .ctrl-value { font-family: var(--mono); font-size: 12px; color: var(--text); }
+  .sub-label { font-size: 9px; font-family: var(--mono); color: var(--text3); letter-spacing: 1.5px; text-transform: uppercase; margin: 10px 0 4px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+  .toggle-wrap { position: relative; width: 38px; height: 20px; flex-shrink: 0; }
+  .toggle-wrap input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider { position: absolute; inset: 0; background: var(--bg3); border: 1px solid var(--border); border-radius: 20px; cursor: pointer; transition: all 0.2s; }
+  .toggle-slider::before { content: ''; position: absolute; left: 3px; top: 3px; width: 12px; height: 12px; background: var(--text3); border-radius: 50%; transition: all 0.2s; }
+  .toggle-wrap input:checked + .toggle-slider { background: rgba(127,255,127,0.15); border-color: var(--accent3); }
+  .toggle-wrap input:checked + .toggle-slider::before { transform: translateX(17px); background: var(--accent3); }
+
+  .ctrl-select { background: var(--bg3); border: 1px solid var(--border); border-radius: 7px; color: var(--text); font-family: var(--mono); font-size: 10px; padding: 4px 8px; cursor: pointer; outline: none; width: 220px; max-width: 100%; text-align: left; }
+  .ctrl-select:focus { border-color: var(--accent); }
+  .stepper { display: flex; align-items: center; gap: 5px; }
+  .step-btn { width: 26px; height: 26px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; flex-shrink: 0; }
+  .step-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,200,255,0.1); }
+  .step-btn:active { transform: scale(0.88); }
+  .step-val { font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--accent); min-width: 48px; text-align: center; }
+
+  .send-btn { width: 100%; margin-top: 10px; padding: 8px; border-radius: 8px; border: 1px solid var(--accent); background: rgba(0,200,255,0.08); color: var(--accent); font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+  .send-btn:hover { background: rgba(0,200,255,0.18); box-shadow: 0 0 10px rgba(0,200,255,0.12); }
+  .send-btn:active { transform: scale(0.98); }
+  .send-btn.sending { opacity: 0.4; pointer-events: none; }
+
+  .ctrl-range { -webkit-appearance: none; width: 100%; height: 4px; border-radius: 4px; background: var(--border); outline: none; cursor: pointer; }
+  .ctrl-range::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--accent); cursor: pointer; border: 2px solid var(--bg3); box-shadow: 0 0 5px rgba(0,200,255,0.4); }
+
+  .big-temp { font-family: var(--mono); font-size: 36px; font-weight: 300; line-height: 1; color: var(--text); }
+  .big-temp span { font-size: 16px; color: var(--text2); }
+  .stat-row { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; }
+  .stat-item { display: flex; flex-direction: column; }
+  .stat-label { font-size: 8px; font-family: var(--mono); color: var(--text3); letter-spacing: 1px; text-transform: uppercase; }
+  .stat-value { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--text); }
+
+  .log-controls { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .log-btn { padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg2); color: var(--text2); font-size: 10px; font-family: var(--mono); cursor: pointer; text-transform: uppercase; letter-spacing: 1px; }
+  .log-btn:hover { border-color: var(--accent); color: var(--text); }
+  .log-btn.active { border-color: var(--accent3); color: var(--accent3); background: rgba(127,255,127,0.1); }
+  
+  #logs-container { height: 300px; overflow-y: scroll; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 10px; font-family: var(--mono); font-size: 11px; line-height: 1.5; white-space: pre-wrap; }
+  .log-entry { border-bottom: 1px solid rgba(255,255,255,0.05); padding: 2px 0; display:flex; gap:10px;}
+  .log-debug { color: var(--text3); }
+  .log-info { color: var(--accent3); }
+  .log-warn { color: var(--warn); }
+  .log-error { color: var(--danger); font-weight: bold; }
+  .log-raw { color: var(--text2); }
+  .time-tag { color: var(--accent); opacity:0.7; min-width: 60px;}
+
+  .toast { position: fixed; bottom: 20px; right: 20px; background: var(--bg2); border: 1px solid var(--accent3); color: var(--accent3); font-family: var(--mono); font-size: 11px; padding: 9px 14px; border-radius: 8px; opacity: 0; transform: translateY(8px); transition: all 0.3s; z-index: 999; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { border-color: var(--danger); color: var(--danger); }
+
+  @media (min-width: 768px) { .chart-container { height: 200px; } main { grid-template-columns: 1fr 1fr; } .full-width { grid-column: 1 / -1; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-badges" id="headerBadges">
+    <div class="badge">
+      <span class="badge-label">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>
+        Feed
+      </span>
+      <span class="badge-value hot" id="b-feed">—</span>
+    </div>
+
+    <div class="badge">
+      <span class="badge-label">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>
+        Return
+      </span>
+      <span class="badge-value" id="b-return">—</span>
+    </div>
+
+    <div class="badge">
+      <span class="badge-label">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M17 18a5 5 0 0 0-10 0"></path><line x1="12" y1="2" x2="12" y2="9"></line><line x1="4.22" y1="10.22" x2="5.64" y2="11.64"></line><line x1="1" y1="18" x2="3" y2="18"></line><line x1="21" y1="18" x2="23" y2="18"></line><line x1="18.36" y1="11.64" x2="19.78" y2="10.22"></line><line x1="23" y1="22" x2="1" y2="22"></line><polyline points="8 22 8 18 16 18 16 22"></polyline></svg>
+        Outside
+      </span>
+      <span class="badge-value cool" id="b-outside">—</span>
+    </div>
+
+    <div class="badge">
+      <span class="badge-label">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+        Freq
+      </span>
+      <span class="badge-value green" id="b-freq">—</span>
+    </div>
+
+    <div class="badge">
+      <span class="badge-label">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"></path><path d="M17 17l-5 5-5-5"></path><path d="M17 7l-5-5-5 5"></path></svg>
+        Flow
+      </span>
+      <span class="badge-value" id="b-flowrate">—</span>
+    </div>
+
+    <div class="badge">
+      <span class="badge-label">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+        Output
+      </span>
+      <span class="badge-value warn" id="b-output">—</span>
+    </div>
+
+    <div class="badge">
+      <span class="badge-label">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
+        Prod
+      </span>
+      <span class="badge-value green" id="b-prod">—</span>
+    </div>
+
+    <div class="badge">
+      <span class="badge-label">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v10"></path><path d="M12 12l4-4"></path><path d="M12 12l-4-4"></path><rect x="6" y="12" width="12" height="8" rx="2"></rect><path d="M9 22v2"></path><path d="M15 22v2"></path></svg>
+        Cons
+      </span>
+      <span class="badge-value" id="b-cons">—</span>
+    </div>
+
+    <div class="badge">
+      <span class="badge-label">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+        Starts
+      </span>
+      <span class="badge-value" id="b-starts">—</span>
+    </div>
+
+    <div class="badge">
+      <span class="badge-label">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        Run
+      </span>
+      <span class="badge-value purple" id="b-runtime">—</span>
+    </div>
+
+    <div class="badge">
+      <span class="badge-label">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+        WiFi
+      </span>
+      <span class="badge-value" id="b-wifi">—</span>
+    </div>
+  </div>
+  
+  <div class="header-right">
+    <div class="fw-version" id="disp-ver">v—</div>
+    <div id="lastUpdate">—</div>
+  </div>
+</header>
+
+<main>
+  <div class="chart-card full-width">
+    <div class="chart-header"><div class="section-title" style="margin:0">System Status Timeline</div></div>
+    <div class="chart-container"><canvas id="statusChart"></canvas></div>
+  </div>
+
+  <div class="chart-card full-width">
+    <div class="chart-header">
+      <div class="section-title" style="margin:0">Temperatures</div>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#ff6b35"></div>Feed</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#00c8ff"></div>Return</div>
+        <div class="legend-item"><div class="legend-dot" style="background: repeating-linear-gradient(90deg, #ffb020 0 4px, transparent 4px 7px)"></div>Z1 Target</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ffff00"></div>Z1 Current</div>
+        <div class="legend-item"><div class="legend-dot" style="background: repeating-linear-gradient(90deg, #00ffff 0 8px, transparent 8px 12px)"></div>Z1 Flow Setpoint</div>
+        <div class="legend-item" id="leg-z2" style="display:none"><div class="legend-dot" style="background: repeating-linear-gradient(90deg, #c084fc 0 4px, transparent 4px 7px)"></div>Z2 Target</div>
+        <div class="legend-item" id="leg-z2-curr" style="display:none"><div class="legend-dot" style="background:#ff69b4"></div>Z2 Current</div>
+        <div class="legend-item" id="leg-z2-flow" style="display:none"><div class="legend-dot" style="background: repeating-linear-gradient(90deg, #8a2be2 0 8px, transparent 8px 12px)"></div>Z2 Flow Setpoint</div>
+      </div>
+    </div>
+    <div class="chart-container"><canvas id="tempChart"></canvas></div>
+  </div>
+
+  <div class="chart-card full-width">
+    <div class="chart-header">
+      <div class="section-title" style="margin:0">Compressor Frequency</div>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#ff6b35"></div>Heating</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#00c8ff"></div>Cooling</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ffb020"></div>DHW</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#00ff7f"></div>Legionella</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#c084fc"></div>Defrost</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ff0000"></div>Booster</div>
+      </div>
+    </div>
+    <div class="chart-container"><canvas id="freqChart"></canvas></div>
+  </div>
+
+  <div class="ctrl-card">
+    <div class="section-title">Zone 1</div>
+    <div class="ctrl-row"><span class="ctrl-label">Operating Mode</span><select class="ctrl-select" id="sel-z1mode" onchange="sendSelect('operating_mode_z1', this)"><option>Heat Target Temperature</option><option>Heat Flow Temperature</option><option>Heat Compensation Curve</option><option>Cool Target Temperature</option><option>Cool Flow Temperature</option><option>Floor Dry Up</option><option>Cool Compensation Curve</option></select></div>
+    <div class="ctrl-row"><span class="ctrl-label">Auto Adaptive: Room Temp Source</span><select class="ctrl-select" id="sel-z1src" onchange="sendSelect('room_temp_source_z1', this)"><option>Room Thermostat</option><option>Home Assistant / REST API</option><option>Asgard Virtual Thermostat</option></select></div>
+    <div class="ctrl-row"><span class="ctrl-label">Virtual Thermostat: Temp Sensor Source</span><select class="ctrl-select" id="sel-z1ts" onchange="sendSelect('temp_sensor_source_z1', this)"><option>Virtual Thermostat Input</option><option>DS18x20</option><option>MRC</option></select></div>
+    <div class="sub-label">Virtual Thermostat Z1</div>
+    <div style="display:flex; align-items:flex-end; gap:14px; margin-bottom:10px;">
+      <div><div class="stat-label">Current Temp</div><div class="big-temp" style="font-size:32px" id="z1-current">—<span>°C</span></div></div>
+      <div style="flex:1;"><div class="stat-label">Setpoint</div><div class="stepper"><button class="step-btn" onclick="step('z1-sp', -0.1)">−</button><div class="step-val" style="font-size:18px; min-width:52px" id="z1-sp-val">—</div><button class="step-btn" onclick="step('z1-sp', +0.1)">+</button></div></div>
+    </div>
+    <div class="ctrl-row"><span class="ctrl-label">Hysteresis &nbsp;<span id="z1-hyst-val" style="color:var(--accent);font-family:var(--mono)">—</span></span><input type="range" class="ctrl-range" id="z1-hyst" min="0.1" max="3.0" step="0.1" style="max-width:140px" oninput="hystInput('z1')"></div>
+    <button class="send-btn" id="btn-z1" onclick="sendZone('z1', this)">Apply Zone 1</button>
+  </div>
+
+  <div class="ctrl-card" id="card-z2" style="display:none;">
+    <div class="section-title">Zone 2</div>
+    <div class="ctrl-row"><span class="ctrl-label">Operating Mode</span><select class="ctrl-select" id="sel-z2mode" onchange="sendSelect('operating_mode_z2', this)"><option>Heat Target Temperature</option><option>Heat Flow Temperature</option><option>Heat Compensation Curve</option><option>Cool Target Temperature</option><option>Cool Flow Temperature</option><option>Floor Dry Up</option><option>Cool Compensation Curve</option></select></div>
+    <div class="ctrl-row"><span class="ctrl-label">Room Temp Source</span><select class="ctrl-select" id="sel-z2src" onchange="sendSelect('room_temp_source_z2', this)"><option>Room Thermostat</option><option>Home Assistant / REST API</option><option>Asgard Virtual Thermostat</option></select></div>
+    <div class="ctrl-row"><span class="ctrl-label">Temp Sensor Source</span><select class="ctrl-select" id="sel-z2ts" onchange="sendSelect('temp_sensor_source_z2', this)"><option>Virtual Thermostat Input</option><option>DS18x20</option><option>MRC</option></select></div>
+    <div class="sub-label">Virtual Thermostat Z2</div>
+    <div style="display:flex; align-items:flex-end; gap:14px; margin-bottom:10px;">
+      <div><div class="stat-label">Current Temp</div><div class="big-temp" style="font-size:32px" id="z2-current">—<span>°C</span></div></div>
+      <div style="flex:1;"><div class="stat-label">Setpoint</div><div class="stepper"><button class="step-btn" onclick="step('z2-sp', -0.1)">−</button><div class="step-val" style="font-size:18px; min-width:52px" id="z2-sp-val">—</div><button class="step-btn" onclick="step('z2-sp', +0.1)">+</button></div></div>
+    </div>
+    <div class="ctrl-row"><span class="ctrl-label">Hysteresis &nbsp;<span id="z2-hyst-val" style="color:var(--accent);font-family:var(--mono)">—</span></span><input type="range" class="ctrl-range" id="z2-hyst" min="0.1" max="3.0" step="0.1" style="max-width:140px" oninput="hystInput('z2')"></div>
+    <button class="send-btn" id="btn-z2" onclick="sendZone('z2', this)">Apply Zone 2</button>
+  </div>
+
+  <div class="ctrl-card">
+    <div class="section-title">Auto Adaptive</div>
+    <div class="ctrl-row"><span class="ctrl-label">Enable / Disable</span><label class="toggle-wrap"><input type="checkbox" id="sw-aa" onchange="sendSwitch('auto_adaptive_control_enabled', this.checked)"><span class="toggle-slider"></span></label></div>
+    <div class="ctrl-row"><span class="ctrl-label">Defrost Mitigation</span><label class="toggle-wrap"><input type="checkbox" id="sw-dm" onchange="sendSwitch('defrost_risk_handling_enabled', this.checked)"><span class="toggle-slider"></span></label></div>
+    <div class="ctrl-row"><span class="ctrl-label">Smart Boost</span><label class="toggle-wrap"><input type="checkbox" id="sw-sb" onchange="sendSwitch('smart_boost_enabled', this.checked)"><span class="toggle-slider"></span></label></div>
+    <div class="ctrl-row"><span class="ctrl-label">Heating System Type</span><select class="ctrl-select" id="sel-hst" onchange="sendSelect('heating_system_type', this)"><option>Underfloor Heating</option><option>Underfloor Heating *</option><option>Underfloor Heating + Radiators</option><option>Underfloor Heating + Radiators *</option><option>Radiators</option><option>Radiators *</option></select></div>
+    
+    <div class="sub-label">Flow Temperature Limits</div>
+    
+    <div class="ctrl-row">
+      <span class="ctrl-label">Setpoint Bias</span>
+      <div class="stepper">
+        <button class="step-btn" onclick="step('aa-bias', -0.1)">−</button>
+        <div class="step-val" id="aa-bias-val">—</div>
+        <button class="step-btn" onclick="step('aa-bias', +0.1)">+</button>
+      </div>
+    </div>
+
+    <div class="ctrl-row">
+      <span class="ctrl-label">Max Flow (Zone 1)</span>
+      <div class="stepper">
+        <button class="step-btn" onclick="step('aa-max', -0.1)">−</button>
+        <div class="step-val" id="aa-max-val">—</div>
+        <button class="step-btn" onclick="step('aa-max', +0.1)">+</button>
+      </div>
+    </div>
+    <div class="ctrl-row">
+      <span class="ctrl-label">Min Flow (Zone 1)</span>
+      <div class="stepper">
+        <button class="step-btn" onclick="step('aa-min', -0.1)">−</button>
+        <div class="step-val" id="aa-min-val">—</div>
+        <button class="step-btn" onclick="step('aa-min', +0.1)">+</button>
+      </div>
+    </div>
+
+    <div id="aa-z2-container" style="display:none">
+        <div class="ctrl-row">
+          <span class="ctrl-label">Max Flow (Zone 2)</span>
+          <div class="stepper">
+            <button class="step-btn" onclick="step('aa-max-z2', -0.1)">−</button>
+            <div class="step-val" id="aa-max-z2-val">—</div>
+            <button class="step-btn" onclick="step('aa-max-z2', +0.1)">+</button>
+          </div>
+        </div>
+        <div class="ctrl-row">
+          <span class="ctrl-label">Min Flow (Zone 2)</span>
+          <div class="stepper">
+            <button class="step-btn" onclick="step('aa-min-z2', -0.1)">−</button>
+            <div class="step-val" id="aa-min-z2-val">—</div>
+            <button class="step-btn" onclick="step('aa-min-z2', +0.1)">+</button>
+          </div>
+        </div>
+    </div>
+
+    <button class="send-btn" id="btn-aa" onclick="sendAA(this)">Apply Auto Adaptive</button>
+  </div>
+
+  <div class="ctrl-card">
+    <div class="section-title">DHW</div>
+    <div class="ctrl-row"><span class="ctrl-label">Force DHW</span><label class="toggle-wrap"><input type="checkbox" id="sw-fdhw" onchange="sendSwitch('force_dhw', this.checked)"><span class="toggle-slider"></span></label></div>
+    <div class="stat-label" style="margin-top:10px">Current Tank Temp</div>
+    <div class="big-temp" id="dhw-current">—<span>°C</span></div>
+    <div class="stat-row">
+      <div class="stat-item"><span class="stat-label">Setpoint</span><span class="stat-value blue" id="dhw-setpoint">—°C</span></div>
+      <div class="stat-item"><span class="stat-label">Max Drop</span><span class="stat-value" id="dhw-drop">—°C</span></div>
+      <div class="stat-item"><span class="stat-label">Consumed (day)</span><span class="stat-value hot" id="dhw-cons">— kWh</span></div>
+      <div class="stat-item"><span class="stat-label">Produced (day)</span><span class="stat-value green" id="dhw-prod">— kWh</span></div>
+    </div>
+    <div class="sub-label">DHW Setpoint Control</div>
+    <div class="ctrl-row"><span class="ctrl-label">Target</span><div class="stepper"><button class="step-btn" onclick="step('dhw-sp', -0.5)">−</button><div class="step-val" id="dhw-sp-val">—</div><button class="step-btn" onclick="step('dhw-sp', +0.5)">+</button></div></div>
+    <button class="send-btn" id="btn-dhw" onclick="sendDHW(this)">Set DHW Setpoint</button>
+  </div>
+
+  <div class="ctrl-card">
+    <div class="section-title">Performance</div>
+    
+    <div class="ctrl-row" style="padding: 10px 0;">
+      <div style="display:flex; align-items:center; gap:12px; width:100%">
+        <div style="width:32px; height:32px; background:rgba(255,107,53,0.1); border-radius:8px; display:flex; align-items:center; justify-content:center; color:#ff6b35;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.1.243-2.143.5-3.5a6 6 0 1 0 3 3z"></path></svg>
+        </div>
+        <div style="flex:1">
+          <div class="stat-label">Heating</div>
+          <div class="stat-value" id="perf-h-cop">— COP</div>
+        </div>
+        <div style="text-align:right">
+          <div class="stat-label">In / Out (kWh)</div>
+          <div class="stat-value"><span id="perf-h-in" style="color:var(--text2)">—</span> / <span id="perf-h-out" style="color:var(--text)">—</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ctrl-row" style="padding: 10px 0;">
+      <div style="display:flex; align-items:center; gap:12px; width:100%">
+        <div style="width:32px; height:32px; background:rgba(0,200,255,0.1); border-radius:8px; display:flex; align-items:center; justify-content:center; color:#00c8ff;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"></path><path d="M12 2v20"></path><path d="M20 16l-4-4 4-4"></path><path d="M4 8l4 4-4 4"></path><path d="M16 4l-4 4-4-4"></path><path d="M8 20l4-4 4 4"></path></svg>
+        </div>
+        <div style="flex:1">
+          <div class="stat-label">Cooling</div>
+          <div class="stat-value" id="perf-c-cop">— COP</div>
+        </div>
+        <div style="text-align:right">
+          <div class="stat-label">In / Out (kWh)</div>
+          <div class="stat-value"><span id="perf-c-in" style="color:var(--text2)">—</span> / <span id="perf-c-out" style="color:var(--text)">—</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ctrl-row" style="padding: 10px 0; border-bottom:none;">
+      <div style="display:flex; align-items:center; gap:12px; width:100%">
+        <div style="width:32px; height:32px; background:rgba(255,176,32,0.1); border-radius:8px; display:flex; align-items:center; justify-content:center; color:#ffb020;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
+        </div>
+        <div style="flex:1">
+          <div class="stat-label">DHW</div>
+          <div class="stat-value" id="perf-d-cop">— COP</div>
+        </div>
+        <div style="text-align:right">
+          <div class="stat-label">In / Out (kWh)</div>
+          <div class="stat-value"><span id="perf-d-in" style="color:var(--text2)">—</span> / <span id="perf-d-out" style="color:var(--text)">—</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-card full-width">
+    <div class="chart-header"><div class="section-title" style="margin:0">System Logs</div><div id="log-status" style="font-size:10px; font-family:var(--mono); color:var(--text3)">Connecting...</div></div>
+    <div class="log-controls">
+      <button class="log-btn" id="pauseBtn" onclick="togglePause()">Pause</button>
+      <button class="log-btn" onclick="clearLogs()">Clear</button>
+      <button class="log-btn" onclick="downloadLogs()">Download</button>
+      <button class="log-btn" style="border-color: var(--accent); color: var(--accent);" onclick="triggerUpload()">Manual Upload</button>
+    </div>
+    <div id="logs-container"></div>
+  </div>
+
+  <input type="file" id="ota-file" style="display:none" accept=".bin" onchange="performUpload()">
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const HISTORY_MINUTES = 1440; 
+const POLL_MS = 5000;
+
+const history = {
+  timestamps: [], feed: [], ret: [], z1sp: [], z2sp: [], z1curr: [], z2curr: [],
+  z1flow: [], z2flow: [], freq: [], mode: [], bin_comp: [], bin_boost: [], 
+  bin_defrost: [], bin_pump: [], bin_in1: [], bin_in6: []
+};
+
+const pending = { 
+  'aa-bias': null, 
+  'aa-max': null, 'aa-min': null, 
+  'aa-max-z2': null, 'aa-min-z2': null,
+  'dhw-sp': null, 'z1-sp': null, 'z1-hyst': null, 'z2-sp': null, 'z2-hyst': null 
+};
+
+const lastEdit = {};
+const serverState = {};
+
+const LIMITS = { 
+  'aa-bias': { min: -5, max: 5, step: 0.1 }, 
+  'aa-max': { min: 30, max: 65, step: 0.1 }, 
+  'aa-min': { min: 20, max: 55, step: 0.1 }, 
+  'aa-max-z2': { min: 30, max: 65, step: 0.1 },
+  'aa-min-z2': { min: 20, max: 55, step: 0.1 }, 
+  'dhw-sp': { min: 40, max: 60, step: 0.5 }, 
+  'z1-sp': { min: 10, max: 30, step: 0.1 }, 
+  'z2-sp': { min: 10, max: 30, step: 0.1 } 
+};
+
+const STEP_EL = { 
+  'aa-bias': 'aa-bias-val', 
+  'aa-max': 'aa-max-val', 'aa-min': 'aa-min-val', 
+  'aa-max-z2': 'aa-max-z2-val', 'aa-min-z2': 'aa-min-z2-val',
+  'dhw-sp': 'dhw-sp-val', 'z1-sp': 'z1-sp-val', 'z2-sp': 'z2-sp-val' 
+};
+
+let tempChart = null, freqChart = null, statusChart = null;
+
+// Manual Upload
+function triggerUpload() { document.getElementById('ota-file').click(); }
+function performUpload() {
+  const input = document.getElementById('ota-file');
+  if (input.files.length === 0) return;
+  const file = input.files[0];
+  const formData = new FormData();
+  formData.append("update", file);
+  const xhr = new XMLHttpRequest();
+  xhr.upload.addEventListener("progress", (e) => {
+    if (e.lengthComputable) {
+      const percent = Math.round((e.loaded / e.total) * 100);
+      showToast(`Uploading: ${percent}%`);
+    }
+  });
+  xhr.addEventListener("load", () => {
+    if (xhr.status === 200) {
+      showToast("✓ Success! Rebooting...", false);
+      setTimeout(() => location.reload(), 15000);
+    } else {
+      showToast(`✗ Error`, true);
+    }
+  });
+  xhr.open("POST", "/update");
+  xhr.send(formData);
+}
+
+// -- STORAGE & CHARTS --
+function saveHistory() { try { localStorage.setItem('asgard_history', JSON.stringify(history)); } catch(e) {} }
+
+function loadHistory() {
+  const raw = localStorage.getItem('asgard_history');
+  if (!raw) return;
+  try {
+    const saved = JSON.parse(raw);
+    if (saved.timestamps && saved.timestamps.length > 0) {
+       Object.keys(history).forEach(k => {
+         if (saved[k] && Array.isArray(saved[k])) {
+            history[k] = saved[k];
+         } else if (k.startsWith('z1flow') || k.startsWith('z2flow')) {
+            history[k] = new Array(saved.timestamps.length).fill(null);
+         }
+       });
+    }
+  } catch(e) { console.warn("History load failed", e); }
+}
+
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") saveHistory(); });
+setInterval(saveHistory, 60000);
+
+function getActivityColor(mode, alpha) {
+  if (!mode) return `rgba(74, 90, 122, ${alpha})`;
+  const m = mode.toLowerCase();
+  if (m.includes('legionella')) return `rgba(0, 255, 127, ${alpha})`;
+  if (m.includes('hot water') || m.includes('dhw') || m.includes('heating water')) return `rgba(255, 176, 32, ${alpha})`;
+  if (m.includes('cooling'))   return `rgba(0, 200, 255, ${alpha})`;
+  if (m.includes('heating'))   return `rgba(255, 107, 53, ${alpha})`;
+  if (m.includes('defrost'))   return `rgba(192, 132, 252, ${alpha})`;
+  return `rgba(74, 90, 122, ${alpha})`;
+}
+
+function getModeColor(mode) {
+  if (!mode) return 'transparent';
+  const m = mode.toLowerCase();
+  if (m.includes('legionella')) return '#00ff7f'; 
+  if (m.includes('hot water') || m.includes('dhw') || m.includes('heating water')) return '#ffb020';
+  if (m.includes('cooling'))   return '#00c8ff';
+  if (m.includes('heating'))   return '#ff6b35';
+  if (m.includes('defrost'))   return '#c084fc';
+  if (m.includes('standby') || m.includes('off')) return '#4a5a7a';
+  return '#4a5a7a';
+}
+
+function getFreqColor(idx, alpha) {
+  const isBooster = history.bin_boost[idx]; 
+  const isDefrost = history.bin_defrost[idx]; 
+  if (isDefrost) return `rgba(192, 132, 252, ${alpha})`; 
+  if (isBooster) return `rgba(255, 0, 0, ${alpha})`;
+  return getActivityColor(history.mode[idx], alpha);
+}
+
+function initCharts() {
+  const commonOptions = {
+    animation: false,
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { color: '#4a5a7a', font: { family: "'JetBrains Mono', monospace", size: 9 }, maxTicksLimit: 8 }, grid: { color: '#1e2d4a' } },
+      y: { ticks: { color: '#4a5a7a', font: { family: "'JetBrains Mono', monospace", size: 9 } }, grid: { color: '#1e2d4a' } }
+    }
+  };
+
+  tempChart = new Chart(document.getElementById('tempChart').getContext('2d'), {
+    type: 'line',
+    data: { labels: [], datasets: [
+      { label: 'Feed',     data: [], borderColor: '#ff6b35', backgroundColor: 'rgba(255,107,53,0.08)', borderWidth: 2, pointRadius: 0, tension: 0.3, fill: false },
+      { label: 'Return',   data: [], borderColor: '#00c8ff', backgroundColor: 'rgba(0,200,255,0.06)',  borderWidth: 2, pointRadius: 0, tension: 0.3, fill: false },
+      { label: 'Z1 Target',data: [], borderColor: '#ffb020', borderWidth: 1.5, pointRadius: 0, tension: 0.3, borderDash: [4,3], fill: false },
+      { label: 'Z2 Target',data: [], borderColor: '#c084fc', borderWidth: 1.5, pointRadius: 0, tension: 0.3, borderDash: [4,3], fill: false, hidden: true },
+      { label: 'Z1 Current',data: [], borderColor: '#ffff00', borderWidth: 2, pointRadius: 0, tension: 0.3, fill: false },
+      { label: 'Z2 Current',data: [], borderColor: '#ff69b4', borderWidth: 2, pointRadius: 0, tension: 0.3, fill: false, hidden: true },
+      { label: 'Z1 Flow Setpoint',  data: [], borderColor: '#00ffff', borderWidth: 1.5, pointRadius: 0, tension: 0.3, borderDash: [8,4], fill: false },
+      { label: 'Z2 Flow Setpoint',  data: [], borderColor: '#8a2be2', borderWidth: 1.5, pointRadius: 0, tension: 0.3, borderDash: [8,4], fill: false, hidden: true }
+    ]},
+    options: { ...commonOptions, plugins: { ...commonOptions.plugins,
+      tooltip: { 
+        backgroundColor: '#0f1525', borderColor: '#1e2d4a', borderWidth: 1, titleColor: '#8899bb', bodyColor: '#e2eaff',
+        callbacks: {
+          labelColor: ctx => {
+            const isDashed = ctx.dataset.borderDash && ctx.dataset.borderDash.length > 0;
+            
+            return {
+              borderColor: ctx.dataset.borderColor,
+              backgroundColor: isDashed ? 'rgba(0,0,0,0)' : ctx.dataset.borderColor,
+              borderWidth: isDashed ? 3 : 0, 
+              borderDash: isDashed ? [2, 2] : []
+            };
+          },
+          label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y !== null ? ctx.parsed.y.toFixed(1) : '—'}°C`
+        }
+      }
+    }}
+  });
+
+  freqChart = new Chart(document.getElementById('freqChart').getContext('2d'), {
+    type: 'line',
+    data: { labels: [], datasets: [{
+      label: 'Hz', data: [], borderColor: '#e2eaff', borderWidth: 2, pointRadius: 0, tension: 0.25, fill: true,
+      backgroundColor: 'rgba(74, 90, 122, 0.1)',
+      segment: {
+        backgroundColor: ctx => getFreqColor(ctx.p0DataIndex, 0.4),
+        borderColor: ctx => getFreqColor(ctx.p0DataIndex, 1.0)
+      }
+    }]},
+    options: { ...commonOptions, plugins: { ...commonOptions.plugins,
+      tooltip: {
+        backgroundColor: '#0f1525', borderColor: '#1e2d4a', borderWidth: 1, titleColor: '#8899bb', bodyColor: '#e2eaff',
+        callbacks: {
+          labelColor: ctx => {
+            let c = getFreqColor(ctx.dataIndex, 1.0);
+            return { borderColor: c, backgroundColor: c, borderWidth: 0 };
+          },
+          label: ctx => {
+            let l = ` ${ctx.dataset.label}: ${ctx.parsed.y}Hz`;
+            if(history.bin_defrost[ctx.dataIndex]) l += ' (Defrost)';
+            else if(history.bin_boost[ctx.dataIndex]) l += ' (Booster)';
+            return l;
+          }
+        }
+      }
+    }}
+  });
+
+  statusChart = new Chart(document.getElementById('statusChart').getContext('2d'), {
+    type: 'line',
+    data: { labels: [], datasets: [
+      { label: 'Operating Mode',    data: [], borderColor: '#1e2d4a', borderWidth:10, pointRadius:0, fill:false, segment: { borderColor: ctx => getModeColor(history.mode[ctx.p0DataIndex]) } },
+      
+      { label: 'Compressor',    data: [], borderColor: '#1e2d4a', borderWidth:10, pointRadius:0, fill:false, segment: { borderColor: ctx => history.bin_comp[ctx.p0DataIndex] ? '#7fff7f' : 'rgba(30,45,74,0.5)' } },
+      { label: 'Booster Heater', data: [], borderColor: '#1e2d4a', borderWidth:10, pointRadius:0, fill:false, segment: { borderColor: ctx => history.bin_boost[ctx.p0DataIndex] ? '#ff4455' : 'rgba(30,45,74,0.5)' } },
+      { label: 'Defrost', data: [], borderColor: '#1e2d4a', borderWidth:10, pointRadius:0, fill:false, segment: { borderColor: ctx => history.bin_defrost[ctx.p0DataIndex] ? '#c084fc' : 'rgba(30,45,74,0.5)' } },
+      { label: 'Water Pump',    data: [], borderColor: '#1e2d4a', borderWidth:10, pointRadius:0, fill:false, segment: { borderColor: ctx => history.bin_pump[ctx.p0DataIndex] ? '#00c8ff' : 'rgba(30,45,74,0.5)' } },
+      { label: 'IN1 demand',     data: [], borderColor: '#1e2d4a', borderWidth:10, pointRadius:0, fill:false, segment: { borderColor: ctx => history.bin_in1[ctx.p0DataIndex] ? '#8899bb' : 'rgba(30,45,74,0.5)' } },
+      { label: 'IN6 demand',     data: [], borderColor: '#1e2d4a', borderWidth:10, pointRadius:0, fill:false, segment: { borderColor: ctx => history.bin_in6[ctx.p0DataIndex] ? '#8899bb' : 'rgba(30,45,74,0.5)' } }
+    ]},
+    options: { 
+      animation: false,
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'nearest', axis: 'xy', intersect: false },
+      scales: {
+        x: commonOptions.scales.x,
+        y: {
+          min: 0, max: 8,
+          ticks: { 
+            color: '#8899bb', font: { family: "'JetBrains Mono', monospace", size: 9 },
+            callback: (v) => {
+              const map = ['', 'IN6', 'IN1', 'Pump', 'Defrost', 'Booster', 'Compressor', 'Mode', ''];
+              return map[v] || '';
+            }
+          },
+          grid: { color: '#1e2d4a' }
+        }
+      },
+      plugins: { 
+        legend: { display: false }, 
+        tooltip: { 
+          enabled: true,
+          backgroundColor: '#0f1525', 
+          borderColor: '#1e2d4a', 
+          borderWidth: 1, 
+          titleColor: '#8899bb', 
+          bodyColor: '#e2eaff',
+          callbacks: {
+            label: (ctx) => {
+               if (ctx.dataset.label === 'Operating Mode') {
+                 return ` Mode: ${history.mode[ctx.dataIndex] || '—'}`;
+               }
+               const keys = ['bin_mode_placeholder', 'bin_comp', 'bin_boost', 'bin_defrost', 'bin_pump', 'bin_in1', 'bin_in6'];
+               const key = keys[ctx.datasetIndex];
+               const val = history[key]?.[ctx.dataIndex]; 
+               return ` ${ctx.dataset.label}: ${val ? 'On' : 'Off'}`;
+            },
+            labelColor: function(context) {
+               if (context.dataset.label === 'Operating Mode') {
+                 const val = history.mode[context.dataIndex];
+                 const c = getModeColor(val);
+                 return { borderColor: c, backgroundColor: c, borderWidth: 0 };
+               }
+               const keys = ['bin_mode_placeholder', 'bin_comp', 'bin_boost', 'bin_defrost', 'bin_pump', 'bin_in1', 'bin_in6'];
+               const key = keys[context.datasetIndex];
+               const val = history[key]?.[context.dataIndex];
+               
+               const onColors = ['#fff', '#7fff7f', '#ff4455', '#c084fc', '#00c8ff', '#8899bb', '#8899bb'];
+               const c = val ? onColors[context.datasetIndex] : '#1e2d4a';
+               
+               return { borderColor: c, backgroundColor: c, borderWidth: 0 };
+            }
+          }
+        } 
+      }
+    }
+  });
+}
+
+function updateCharts(d) {
+  if (!tempChart || !freqChart || !statusChart) return;
+  const now = Date.now();
+  const cutoff = now - HISTORY_MINUTES * 60 * 1000;
+
+  while (history.timestamps.length && history.timestamps[0] < cutoff) {
+    history.timestamps.shift();
+    history.feed.shift(); history.ret.shift();
+    history.z1sp.shift(); history.z2sp.shift();
+    history.z1curr.shift(); history.z2curr.shift();
+    history.z1flow.shift(); history.z2flow.shift();
+    history.freq.shift(); 
+    history.mode.shift();    
+    history.bin_comp.shift(); history.bin_boost.shift(); history.bin_defrost.shift();
+    history.bin_pump.shift(); history.bin_in1.shift(); history.bin_in6.shift();
+  }
+
+  history.timestamps.push(now);
+  history.feed.push(d.hp_feed_temp ?? null);
+  history.ret.push(d.hp_return_temp ?? null);
+  history.z1sp.push(d.z1_setpoint ?? null);
+  history.z2sp.push(d.z2_setpoint ?? null);
+  history.z1curr.push(d.z1_current_temp ?? null);
+  history.z2curr.push(d.z2_current_temp ?? null);
+  history.z1flow.push(d.z1_flow_temp_target ?? null);
+  history.z2flow.push(d.z2_flow_temp_target ?? null);
+
+  history.freq.push(d.compressor_frequency ?? null);
+  history.mode.push(d.status_operation ?? '');
+  
+  const c = d.status_compressor ? 1 : 0;
+  const b = d.status_booster ? 1 : 0;
+  const df = d.status_defrost ? 1 : 0;
+  const p = d.status_water_pump ? 1 : 0;
+  const i1 = d.status_in1_request ? 1 : 0;
+  const i6 = d.status_in6_request ? 1 : 0;
+
+  history.bin_comp.push(c); 
+  history.bin_boost.push(b); 
+  history.bin_defrost.push(df);
+  history.bin_pump.push(p); 
+  history.bin_in1.push(i1); 
+  history.bin_in6.push(i6);
+
+  const labels = history.timestamps.map(t => new Date(t).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }));
+
+  tempChart.data.labels = labels;
+  tempChart.data.datasets[0].data = history.feed;
+  tempChart.data.datasets[1].data = history.ret;
+  tempChart.data.datasets[2].data = history.z1sp;
+  tempChart.data.datasets[3].data = history.z2sp;
+  tempChart.data.datasets[4].data = history.z1curr;
+  tempChart.data.datasets[5].data = history.z2curr;
+  tempChart.data.datasets[6].data = history.z1flow;
+  tempChart.data.datasets[7].data = history.z2flow;
+  
+  const isZ2 = (d.zone2_enabled !== undefined) ? d.zone2_enabled : true;
+  tempChart.data.datasets[3].hidden = !isZ2;
+  tempChart.data.datasets[5].hidden = !isZ2;
+  tempChart.data.datasets[7].hidden = !isZ2;
+  
+  document.getElementById('leg-z2').style.display = isZ2 ? 'flex' : 'none';
+  document.getElementById('leg-z2-curr').style.display = isZ2 ? 'flex' : 'none';
+  document.getElementById('leg-z2-flow').style.display = isZ2 ? 'flex' : 'none';
+  
+  tempChart.update('none');
+
+  freqChart.data.labels = labels;
+  freqChart.data.datasets[0].data = history.freq;
+  freqChart.update();
+
+  statusChart.data.labels = labels;
+  statusChart.data.datasets[0].data = history.mode.map(() => 7);
+  statusChart.data.datasets[1].data = history.bin_comp.map(() => 6);
+  statusChart.data.datasets[2].data = history.bin_boost.map(() => 5);
+  statusChart.data.datasets[3].data = history.bin_defrost.map(() => 4);
+  statusChart.data.datasets[4].data = history.bin_pump.map(() => 3);
+  statusChart.data.datasets[5].data = history.bin_in1.map(() => 2);
+  statusChart.data.datasets[6].data = history.bin_in6.map(() => 1);
+  statusChart.update('none');
+}
+
+function setToggle(id, val) {
+  if (val != null) document.getElementById(id).checked = !!val;
+}
+
+function setSelect(id, idx) {
+  if (idx === null || idx === undefined) return;
+  const el = document.getElementById(id);
+  if (!el || document.activeElement === el) return;
+  
+  if (el.selectedIndex !== idx) {
+    el.selectedIndex = idx;
+  }
+}
+
+function seedPending(key, val) {
+  if (val != null) {
+    const newVal = parseFloat(val);
+    serverState[key] = newVal;
+
+    if (lastEdit[key] && (Date.now() - lastEdit[key] < 4000)) {
+        return; 
+    }
+
+    if (pending[key] !== newVal) {
+      pending[key] = newVal;
+      refreshStepVal(key);
+    }
+  }
+}
+
+function seedHyst(zone, val) {
+  const key = zone + '-hyst';
+  const elId = zone + '-hyst';
+  
+  if (val != null) {
+    const newVal = parseFloat(val);
+    serverState[key] = newVal;
+    
+    const el = document.getElementById(elId);
+    
+    if (el && document.activeElement === el) return;
+    
+    if (lastEdit[key] && (Date.now() - lastEdit[key] < 4000)) return;
+
+    if (pending[key] !== newVal) {
+      pending[key] = newVal;
+      if (el) el.value = newVal;
+      setText(zone + '-hyst-val', newVal.toFixed(1));
+    }
+  }
+}
+
+function refreshStepVal(key) {
+  const el = document.getElementById(STEP_EL[key]);
+  if (el && pending[key] != null) el.textContent = pending[key].toFixed(1);
+}
+
+function hasChanged(key) {
+  if (pending[key] === null) return false;
+  if (serverState[key] === undefined) return true;
+  return Math.abs(pending[key] - serverState[key]) > 0.001;
+}
+
+function render(d) {
+  const isZ2 = (d.zone2_enabled !== undefined) ? d.zone2_enabled : true;
+  const z2Card = document.getElementById('card-z2');
+  if (z2Card) {
+    z2Card.style.display = isZ2 ? 'block' : 'none';
+  }
+  const z2AA = document.getElementById('aa-z2-container');
+  if(z2AA) {
+      z2AA.style.display = isZ2 ? 'block' : 'none';
+  }
+
+  if (d.aa_bias_lim) LIMITS['aa-bias'] = d.aa_bias_lim;
+  if (d.max_flow_lim) { LIMITS['aa-max'].min = d.max_flow_lim.min; LIMITS['aa-max'].max = d.max_flow_lim.max; LIMITS['aa-max'].step = 0.1; }
+  if (d.min_flow_lim) { LIMITS['aa-min'].min = d.min_flow_lim.min; LIMITS['aa-min'].max = d.min_flow_lim.max; LIMITS['aa-min'].step = 0.1; }
+  if (d.max_flow_z2_lim) { LIMITS['aa-max-z2'].min = d.max_flow_z2_lim.min; LIMITS['aa-max-z2'].max = d.max_flow_z2_lim.max; LIMITS['aa-max-z2'].step = 0.1; }
+  if (d.min_flow_z2_lim) { LIMITS['aa-min-z2'].min = d.min_flow_z2_lim.min; LIMITS['aa-min-z2'].max = d.min_flow_z2_lim.max; LIMITS['aa-min-z2'].step = 0.1; }
+
+  if (d.hysteresis_z1_lim) {
+    const el = document.getElementById('z1-hyst');
+    if(el) { el.min = d.hysteresis_z1_lim.min; el.max = d.hysteresis_z1_lim.max; el.step = d.hysteresis_z1_lim.step; }
+  }
+  if (d.hysteresis_z2_lim) {
+    const el = document.getElementById('z2-hyst');
+    if(el) { el.min = d.hysteresis_z2_lim.min; el.max = d.hysteresis_z2_lim.max; el.step = d.hysteresis_z2_lim.step; }
+  }
+
+  setText('b-mode',    d.status_operation ?? '—');
+  setText('b-feed',    fmt1(d.hp_feed_temp) + '°');
+  setText('b-return',  fmt1(d.hp_return_temp) + '°');
+  setText('b-outside', fmt1(d.outside_temp) + '°');
+  setText('b-freq',    (d.compressor_frequency != null ? Math.round(d.compressor_frequency) : '—') + 'Hz');
+  setText('b-flowrate',fmt1(d.flow_rate) + 'L');
+  setText('b-output',  (d.computed_output_power != null ? (d.computed_output_power).toFixed(1) : '—') + 'kW');
+  setText('b-prod',    fmt1(d.daily_computed_output_power) + 'kWh');
+  setText('b-cons',    fmt1(d.daily_total_energy_consumption) + 'kWh');
+  setText('b-starts',  d.compressor_starts != null ? String(Math.round(d.compressor_starts)) : '—');
+  setText('b-runtime', d.runtime != null ? fmt1(d.runtime) + 'h' : '—');
+  setText('b-wifi',    d.wifi_signal_db != null ? String(Math.round(d.wifi_signal_db)) + 'dB' : '—');
+
+  setText('dhw-current',  fmt1(d.dhw_temp));
+  setText('dhw-setpoint', fmt1(d.dhw_flow_temp_target) + '°C');
+  setText('dhw-drop',     fmt1(d.dhw_flow_temp_drop) + '°C');
+  setText('dhw-cons',     fmt1(d.dhw_consumed) + ' kWh');
+  setText('dhw-prod',     fmt1(d.dhw_delivered) + ' kWh');
+  seedPending('dhw-sp', d.dhw_flow_temp_target);
+  setToggle('sw-fdhw', d.force_dhw); 
+
+  setText('perf-h-in',  fmt2(d.heating_consumed));
+  setText('perf-h-out', fmt2(d.heating_produced));
+  setText('perf-h-cop', fmt2(d.heating_cop) + ' COP');
+
+  setText('perf-c-in',  fmt2(d.cooling_consumed));
+  setText('perf-c-out', fmt2(d.cooling_produced));
+  setText('perf-c-cop', fmt2(d.cooling_cop) + ' COP');
+
+  setText('perf-d-in',  fmt2(d.dhw_consumed));
+  setText('perf-d-out', fmt2(d.dhw_delivered)); 
+  setText('perf-d-cop', fmt2(d.dhw_cop) + ' COP');
+
+  setText('z1-current', fmt1(d.z1_current_temp));
+  seedPending('z1-sp', d.z1_setpoint);
+  seedHyst('z1', d.thermostat_hysteresis_z1);
+
+  setText('z2-current', fmt1(d.z2_current_temp));
+  seedPending('z2-sp', d.z2_setpoint);
+  seedHyst('z2', d.thermostat_hysteresis_z2);
+
+  seedPending('aa-bias', d.auto_adaptive_setpoint_bias);
+  seedPending('aa-max',  d.maximum_heating_flow_temp);
+  seedPending('aa-min',  d.minimum_heating_flow_temp);
+  seedPending('aa-max-z2', d.maximum_heating_flow_temp_z2);
+  seedPending('aa-min-z2', d.minimum_heating_flow_temp_z2);
+
+  setToggle('sw-aa', d.auto_adaptive_control_enabled);
+  setToggle('sw-dm', d.defrost_risk_handling_enabled);
+  setToggle('sw-sb', d.smart_boost_enabled);
+
+  setSelect('sel-hst',    d.heating_system_type);
+  setSelect('sel-z1src',  d.room_temp_source_z1);
+  setSelect('sel-z2src',  d.room_temp_source_z2);
+  setSelect('sel-z1mode', d.operating_mode_z1);
+  setSelect('sel-z2mode', d.operating_mode_z2);
+  setSelect('sel-z1ts',   d.temp_sensor_source_z1);
+  setSelect('sel-z2ts',   d.temp_sensor_source_z2);
+  
+  setText('disp-ver', d.latest_version || '—');
+
+  setText('lastUpdate', new Date().toLocaleTimeString('nl-NL'));
+}
+
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+function fmt1(v) { return (v != null && !isNaN(v)) ? parseFloat(v).toFixed(1) : '—'; }
+function fmt2(v) { return (v != null && !isNaN(v)) ? parseFloat(v).toFixed(2) : '—'; }
+
+function step(key, delta) {
+  lastEdit[key] = Date.now();
+  const lim = LIMITS[key];
+  if (!lim || pending[key] === null) return;
+  let newVal = pending[key] + delta;
+  const stepSize = lim.step || 0.5;
+  newVal = Math.round(newVal / stepSize) * stepSize;
+  newVal = Math.max(lim.min, Math.min(lim.max, newVal));
+  pending[key] = +newVal.toFixed(2);
+  refreshStepVal(key);
+}
+
+function hystInput(zone) {
+  const key = zone + '-hyst';
+  lastEdit[key] = Date.now();
+  pending[key] = parseFloat(document.getElementById(zone + '-hyst').value);
+  setText(zone + '-hyst-val', pending[key].toFixed(1));
+}
+
+async function apiPost(payload) {
+  const res = await fetch('/dashboard/set', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+}
+
+async function sendSwitch(key, val) {
+  try { await apiPost({ key, value: val ? 1 : 0 }); showToast('✓ ' + key); } 
+  catch(e) { showToast('✗ ' + e.message, true); }
+}
+
+async function sendSelect(key, el) {
+  try { await apiPost({ key, value: parseInt(el.selectedIndex) }); showToast('✓ ' + key); } 
+  catch(e) { showToast('✗ ' + e.message, true); }
+}
+
+async function sendAA(btn) {
+  btn.classList.add('sending');
+  let c = 0;
+  try {
+    if (hasChanged('aa-bias')) { await apiPost({ key: 'auto_adaptive_setpoint_bias', value: pending['aa-bias'] }); c++; }
+    if (hasChanged('aa-max'))  { await apiPost({ key: 'maximum_heating_flow_temp',   value: pending['aa-max']  }); c++; }
+    if (hasChanged('aa-min'))  { await apiPost({ key: 'minimum_heating_flow_temp',   value: pending['aa-min']  }); c++; }
+    
+    if (hasChanged('aa-max-z2')) { await apiPost({ key: 'maximum_heating_flow_temp_z2', value: pending['aa-max-z2'] }); c++; }
+    if (hasChanged('aa-min-z2')) { await apiPost({ key: 'minimum_heating_flow_temp_z2', value: pending['aa-min-z2'] }); c++; }
+
+    showToast(c > 0 ? '✓ AA updated' : 'No changes');
+  } catch(e) { showToast('✗ ' + e.message, true); }
+  btn.classList.remove('sending');
+}
+
+async function sendDHW(btn) {
+  if (!hasChanged('dhw-sp')) { showToast('No change'); return; }
+  btn.classList.add('sending');
+  try {
+    await apiPost({ key: 'dhw_setpoint', value: pending['dhw-sp'] });
+    showToast('✓ DHW updated');
+  } catch(e) { showToast('✗ ' + e.message, true); }
+  btn.classList.remove('sending');
+}
+
+async function sendZone(zone, btn) {
+  btn.classList.add('sending');
+  let c = 0;
+  try {
+    if (hasChanged(zone + '-sp'))   { await apiPost({ key: 'virtual_climate_' + zone + '_setpoint', value: pending[zone+'-sp'] }); c++; }
+    if (hasChanged(zone + '-hyst')) { await apiPost({ key: 'thermostat_hysteresis_' + zone,         value: pending[zone+'-hyst'] }); c++; }
+    showToast(c > 0 ? '✓ Zone ' + zone.toUpperCase() + ' updated' : 'No changes');
+  } catch(e) { showToast('✗ ' + e.message, true); }
+  btn.classList.remove('sending');
+}
+
+async function fetchState() {
+  try {
+    const res = await fetch('/dashboard/state');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const d = await res.json();
+    render(d);
+    updateCharts(d);
+  } catch(e) {
+    console.warn(e);
+    setText('lastUpdate', 'ERR');
+  }
+}
+
+function showToast(msg, isError=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.className = 'toast', 2800);
+}
+
+let eventSource = null;
+let isPaused = false;
+let logBuffer = [];
+const logContainer = document.getElementById('logs-container');
+const statusDiv = document.getElementById('log-status');
+const ansiRegex = /\x1B\[[0-9;]*[mK]/g;
+
+function startLog() {
+  if(eventSource) eventSource.close();
+  isPaused = false;
+  logContainer.innerHTML = ''; 
+  logBuffer = []; 
+  updateStatus("Connecting...", "var(--warn)");
+
+  eventSource = new EventSource('/events');
+
+  eventSource.addEventListener('log', e => handleLogData(e.data));
+  eventSource.onmessage = e => handleLogData(e.data);
+  
+  eventSource.onopen = () => {
+    updateStatus("Connected", "var(--accent3)");
+    appendLogLine("--- Connected to EventStream ---", "log-info");
+  };
+  eventSource.onerror = (e) => {
+    if (eventSource.readyState == EventSource.CLOSED) {
+      updateStatus("Disconnected", "var(--danger)");
+    } else {
+      updateStatus("Reconnecting...", "var(--warn)");
+    }
+  };
+}
+
+function handleLogData(rawData) {
+  if(isPaused || !rawData) return;
+  let cleanData = rawData.replace(ansiRegex, '');
+  if(cleanData.trim() === "") return;
+
+  try {
+    processJsonLog(JSON.parse(cleanData));
+  } catch (e) {
+    processStringLog(cleanData);
+  }
+}
+
+function processJsonLog(data) {
+  if(!data.message) return;
+  let levelChar = data.level ? data.level.substring(0, 1).toUpperCase() : "U";
+  const tag = data.tag ? `[${data.tag}]` : "";
+  const msg = `[${levelChar}]${tag}: ${data.message}`;
+  
+  let css = 'log-raw';
+  if (data.level === 'DEBUG') css = 'log-debug';
+  else if (data.level === 'INFO') css = 'log-info';
+  else if (data.level === 'WARN') css = 'log-warn';
+  else if (data.level === 'ERROR') css = 'log-error';
+
+  appendLogLine(msg, css);
+}
+
+function processStringLog(text) {
+  let css = 'log-raw';
+  if (text.includes('[D]')) css = 'log-debug';
+  else if (text.includes('[I]')) css = 'log-info';
+  else if (text.includes('[W]')) css = 'log-warn';
+  else if (text.includes('[E]')) css = 'log-error';
+  appendLogLine(text, css);
+}
+
+function appendLogLine(text, cssClass) {
+  const timeStr = new Date().toLocaleTimeString('nl-NL');
+  logBuffer.push(`[${timeStr}] ${text}`);
+  
+  const row = document.createElement('div');
+  row.className = 'log-entry ' + cssClass;
+  row.innerHTML = `<span class="time-tag">${timeStr}</span><span>${text}</span>`;
+  
+  logContainer.appendChild(row);
+  logContainer.scrollTop = logContainer.scrollHeight;
+  
+  if (logContainer.childElementCount > 500) {
+    logContainer.removeChild(logContainer.firstChild);
+    logBuffer.shift();
+  }
+}
+
+function togglePause() {
+  isPaused = !isPaused;
+  const btn = document.getElementById('pauseBtn');
+  if (isPaused) {
+    btn.textContent = "Resume";
+    btn.classList.add('active');
+    updateStatus("Paused", "var(--warn)");
+  } else {
+    btn.textContent = "Pause";
+    btn.classList.remove('active');
+    updateStatus("Streaming", "var(--accent3)");
+  }
+}
+
+function clearLogs() {
+  logContainer.innerHTML = '';
+  logBuffer = [];
+}
+
+function downloadLogs() {
+  if(logBuffer.length === 0) return;
+  const blob = new Blob([logBuffer.join('\n')], { type: 'text/plain' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `logs_${new Date().toISOString().slice(0,19)}.txt`;
+  a.click();
+  window.URL.revokeObjectURL(url);
+}
+
+function updateStatus(text, color) {
+  statusDiv.textContent = text;
+  statusDiv.style.color = color || 'var(--text3)';
+}
+
+(function loadChartJS() {
+  const s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+  s.onload = () => { 
+    initCharts(); 
+    loadHistory(); 
+    fetchState(); 
+    startLog(); 
+    setInterval(fetchState, POLL_MS); 
+  };
+  s.onerror = () => {
+    const s2 = document.createElement('script');
+    s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js';
+    s2.onload = () => { 
+      initCharts(); 
+      loadHistory(); 
+      fetchState(); 
+      startLog(); 
+      setInterval(fetchState, POLL_MS); 
+    };
+    document.head.appendChild(s2);
+  };
+  document.head.appendChild(s);
+})();
+</script>
+</body>
+</html>

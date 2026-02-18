@@ -29,15 +29,15 @@ substitutions:
   heatpump_switch_holiday: Holiday Mode
   wifi_signal_proc: WiFi Signal %
   wifi_signal_db: WiFi Signal dB
-  z1_flow_temp_target: Zone 1 H/C Setpoint Value
+  z1_flow_temp_target: Zone 1 Setpoint Value
   status_prohibit_cool_z1: Zone 1 Prohibit Cooling Status
   status_prohibit_heating_z1: Zone 1 Prohibit Heating
   heatpump_climate_z1: Zone 1 Flow Temp
   heatpump_climate_room_z1: Zone 1 Room Temp
   z1_room_temp_target: Zone 1 Room Setpoint Value
   z1_room_temp: Zone 1 Room Temp
-  heatpump_number_z2_set_flow_temperature: Zone 2 H/C setpoint
-  z2_flow_temp_target: Zone 2 H/C Setpoint Value
+  heatpump_number_z2_set_flow_temperature: Zone 2 setpoint
+  z2_flow_temp_target: Zone 2 Setpoint Value
   status_prohibit_cool_z2: Zone 2 Prohibit Cooling
   status_prohibit_heating_z2: Zone 2 Prohibit Heating
   heatpump_number_z2_set_room_temperature: Zone 2 Room Setpoint
@@ -146,6 +146,7 @@ substitutions:
   temperature_feedback_source: 'Auto-Adaptive: Room Temperature source'
   temperature_feedback_option_room: 'Room Thermostat'
   select_feedback_option_api: 'Home Assistant / REST API'
+  select_feedback_option_asgard_vt: 'Asgard Virtual Thermostat'
   heating_system_type: 'Auto-Adaptive: Heating System Type'
   heating_system_type_option_ufh: 'Underfloor Heating'
   heating_system_type_option_ufh_rad: 'Underfloor Heating + Radiators'
@@ -153,6 +154,7 @@ substitutions:
   auto_adaptive_setpoint_bias: 'Auto-Adaptive: Setpoint Bias'
   temperature_feedback: 'Auto-Adaptive: Current Room Temperature Feedback'
   defrost_risk_handling_enabled: 'Auto-Adaptive: Defrost Mitigation'
+  smart_boost_enabled: 'Auto-Adaptive: Smart Boost'
 
   # total increasing energy totals
   total_increasing_heating_consumed: Total Heating Consumed
@@ -169,6 +171,14 @@ substitutions:
 
   # master thermostats
   master_thermostat: Master Room Sensor
+
+  # stats collection
+  solver_kwh_meter_feedback_source: Energy Meter Source
+  solver_kwh_meter_option_internal: Internal Energy Meter
+  solver_kwh_meter_feedback: kWh meter feedback
+
+  asgard_vt_temp_sensor_source: Virtual Thermostat Source
+
   # Display labels
   hp_status: HP Status
   smart_grid: Smart Grid

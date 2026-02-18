@@ -18,15 +18,15 @@ substitutions:
   status_in1_request: Status In1 thermostaat
   status_in6_request: Status In6 thermostaat 2
   status_in5_request: Status In5 buiten thermostaat
-  heatpump_select_dhw_mode: Set SWW modus
+  heatpump_select_dhw_mode: SWW modus
   normal: Normaal
   eco: Eco
   version: ESP versie
-  led_brightness: Set Led helderheid
-  led_switch: Set Led schakelaar
-  heatpump_switch_force_dhw: Set forceer sww
-  heatpump_switch_power_mode: Set warmtepomp Aan/uit
-  heatpump_switch_holiday: Set vakantie modus
+  led_brightness: Led helderheid
+  led_switch: Led schakelaar
+  heatpump_switch_force_dhw: Forceer sww
+  heatpump_switch_power_mode: Warmtepomp
+  heatpump_switch_holiday: Vakantie modus
   wifi_signal_proc: WiFi Signaal %
   wifi_signal_db: WiFi Signaal dB
   z1_flow_temp_target: Zone 1 flow setpoint waarde
@@ -144,6 +144,7 @@ substitutions:
   temperature_feedback_source: 'Auto-Adaptief: Bron Kamertemperatuur'
   temperature_feedback_option_room: 'Kamerthermostaat'
   select_feedback_option_api: 'Home Assistant / REST API'
+  select_feedback_option_asgard_vt: 'Asgard Virtuele Thermostaat'
   heating_system_type: 'Auto-Adaptief: Type Verwarmingssysteem'
   heating_system_type_option_ufh: 'Vloerverwarming'
   heating_system_type_option_ufh_rad: 'Vloerverwarming + Radiatoren'
@@ -151,6 +152,7 @@ substitutions:
   auto_adaptive_setpoint_bias: 'Auto-Adaptief: Setpoint Bias'
   temperature_feedback: 'Auto-Adaptief: Terugkoppeling Huidige Kamertemperatuur'
   defrost_risk_handling_enabled: 'Auto-Adaptief: Defrosts Beperken'
+  smart_boost_enabled: 'Auto-Adaptief: Slimme Boost'
   total_increasing_heating_consumed: Totaal Verbruik Verwarming
   total_increasing_heating_delivered: Totaal Geleverd Verwarming
   total_increasing_cool_consumed: Totaal Verbruik Koeling
@@ -161,3 +163,9 @@ substitutions:
   pump_feedback: 'Pompverbruik'
   pump_feedback_status: 'Status Pompfeedback'
   master_thermostat: 'Hoofd-Ruimtesensor'
+
+  solver_kwh_meter_feedback_source: "Bron energiemeter"
+  solver_kwh_meter_option_internal: "Interne energiemeter"
+  solver_kwh_meter_feedback: "kWh-meter terugkoppeling"
+
+  asgard_vt_temp_sensor_source: 'Bron Virtuele Thermostaat'

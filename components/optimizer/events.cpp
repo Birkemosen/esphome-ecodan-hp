@@ -18,7 +18,7 @@ namespace esphome
 
             auto &status = this->state_.ecodan_instance->get_status();
 
-            if (status.has_independent_z2()) 
+            if (status.has_independent_zone_temps()) 
             {
                 if (zone == OptimizerZone::SINGLE) {
                     return;
@@ -70,9 +70,9 @@ namespace esphome
                     // also add 0.5 during post dhw while heating
                     adjusted_flow += 0.5f;
                 }
-            }                
+            }   
             else {
-                adjusted_flow = enforce_step_down(actual_flow_temp, current_flow_setpoint);
+                adjusted_flow = enforce_step_down(status, actual_flow_temp, current_flow_setpoint);
             }
     
             if (adjusted_flow != current_flow_setpoint)
@@ -84,7 +84,7 @@ namespace esphome
         bool Optimizer::set_flow_temp(float flow, OptimizerZone zone) {
             auto &status = this->state_.ecodan_instance->get_status();
             
-            if (status.has_independent_z2())
+            if (status.has_independent_zone_temps())
             {
                 if (zone == OptimizerZone::ZONE_1) {
                     if (status.is_auto_adaptive_heating(esphome::ecodan::Zone::ZONE_1) && status.Zone1FlowTemperatureSetPoint != flow)
@@ -111,7 +111,7 @@ namespace esphome
                     {
                         ESP_LOGD(OPTIMIZER_TAG, "CMD: Set Z2 Cool Flow -> %.1f°C (%.1f°C)", flow, status.Zone2FlowTemperatureSetPoint);
                         this->state_.ecodan_instance->set_flow_target_temperature(flow, esphome::ecodan::Zone::ZONE_2);
-                        return true;
+                       return true;
                     }
                 }
             }
@@ -135,10 +135,11 @@ namespace esphome
             return false;
         }
 
-        float Optimizer::enforce_step_down(float actual_flow_temp, float calculated_flow) 
+        float Optimizer::enforce_step_down(const ecodan::Status &status, float actual_flow_temp, float calculated_flow) 
         {
             const float MAX_FEED_STEP_DOWN = 1.0f;
             const float MAX_FEED_STEP_DOWN_ADJUSTMENT = 0.5f;
+            
             if ((actual_flow_temp - calculated_flow) > MAX_FEED_STEP_DOWN)
             {
                 ESP_LOGW(OPTIMIZER_TAG, "Flow adjust: %.2f°C to prevent compressor stop! (setpoint: %.2f°C is %.2f°C below actual feed temp)",
@@ -151,26 +152,28 @@ namespace esphome
 
         void Optimizer::on_compressor_stop()
         {
-            ESP_LOGD(OPTIMIZER_CYCLE_TAG, "Running compressor stop logic...");
             auto &status = this->state_.ecodan_instance->get_status();
-
             bool stand_alone_predictive_active = !this->state_.auto_adaptive_control_enabled->state && this->state_.predictive_short_cycle_control_enabled->state;
-            float adjustment = this->predictive_short_cycle_total_adjusted_;
+
+            ESP_LOGD(OPTIMIZER_CYCLE_TAG, "Compressor stop event: stand-alone-cycle prevention: %d, saved z1 flow setpoint: %.1f, saved z2 flow setpoint: %.1f"
+                , stand_alone_predictive_active, this->pcp_old_z1_setpoint_, this->pcp_old_z2_setpoint_);
 
             // don't restore feed temp when defrost is active
-            if (!status.DefrostActive && stand_alone_predictive_active && adjustment > 0.0f)
+            if (!status.DefrostActive && stand_alone_predictive_active && (!isnan(this->pcp_old_z1_setpoint_) || !isnan(this->pcp_old_z2_setpoint_)))
             {
                 ESP_LOGD(OPTIMIZER_CYCLE_TAG, "Restoring flow setpoint after predictive boost.");
 
-                float restored_flow_z1 = status.Zone1FlowTemperatureSetPoint - adjustment;
-                this->state_.ecodan_instance->set_flow_target_temperature(restored_flow_z1, esphome::ecodan::Zone::ZONE_1);
-
-                if (status.has_independent_z2())
-                {
-                    float restored_flow_z2 = status.Zone2FlowTemperatureSetPoint - adjustment;
-                    this->state_.ecodan_instance->set_flow_target_temperature(restored_flow_z2, esphome::ecodan::Zone::ZONE_2);
+                if (!isnan(this->pcp_old_z1_setpoint_)) {
+                    this->state_.ecodan_instance->set_flow_target_temperature(this->pcp_old_z1_setpoint_, esphome::ecodan::Zone::ZONE_1);
+                    this->pcp_old_z1_setpoint_ = NAN;
+                    this->pcp_adjustment_z1_ = 0.0f;
                 }
-                this->predictive_short_cycle_total_adjusted_ = 0.0f;
+
+                if (status.has_2zones() && !isnan(this->pcp_old_z2_setpoint_)) {
+                    this->state_.ecodan_instance->set_flow_target_temperature(this->pcp_old_z2_setpoint_, esphome::ecodan::Zone::ZONE_2);
+                    this->pcp_old_z2_setpoint_ = NAN;
+                    this->pcp_adjustment_z2_ = 0.0f;
+                }
             }
 
             if (this->state_.lockout_duration->active_index().value_or(0) == 0)
@@ -220,17 +223,24 @@ namespace esphome
                 ESP_LOGD(OPTIMIZER_TAG, "Operation Mode Changed to heating: %d -> %d", previous_mode, new_mode);
                 this->run_auto_adaptive_loop();
             }
-
-            if (new_mode != heating_mode) {
-                 this->reset_predictive_boost();
-            }
         }
 
         void Optimizer::on_defrost_state_change(bool x, bool x_previous) 
-        {      
-            if (x_previous && !x)
+        { 
+            // New defrost, store outside temp
+            if (!x_previous && x)
             {
-                ESP_LOGD(OPTIMIZER_TAG, "Defrost stop: triggering auto-adaptive loop.");
+                auto &status = this->state_.ecodan_instance->get_status();
+                if (!std::isnan(status.OutsideTemperature)) {
+                    this->locked_outside_temp_ = status.OutsideTemperature;
+                    ESP_LOGI(OPTIMIZER_TAG, "Defrost started. Locking outside temp at %.1f°C for adaptive calculations.", this->locked_outside_temp_);
+                }
+            }
+            // Defrost STOP
+            else if (x_previous && !x)
+            {
+                this->last_defrost_time_ = millis();
+                ESP_LOGD(OPTIMIZER_TAG, "Defrost stop: triggering auto-adaptive loop (Also updating last_defrost timestamp).");
                 this->run_auto_adaptive_loop();
             }
         }
@@ -252,6 +262,7 @@ namespace esphome
                 {
                     ESP_LOGI(OPTIMIZER_CYCLE_TAG, "Compressor START detected");
                     this->compressor_start_time_ = millis();
+                    this->last_check_ms_ = this->compressor_start_time_;
                 }
                 if (this->state_.auto_adaptive_control_enabled->state)
                 {

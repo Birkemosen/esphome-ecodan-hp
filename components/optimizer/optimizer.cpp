@@ -12,13 +12,13 @@ namespace esphome
 
         Optimizer::Optimizer(OptimizerState state) : state_(state) {
 
-            auto update_if_changed = [](float &storage, float new_val, auto callback) {
+            auto update_if_changed = [this](float &storage, float new_val, auto callback) {
                 if (std::isnan(new_val)) return; 
+
                 if (std::isnan(storage) || std::abs(storage - new_val) > 0.01f) {
                     // store new value first then invoke callback
                     auto previous = storage;
                     storage = new_val;
-
                     callback(new_val, previous);
                 }
             };
@@ -26,7 +26,10 @@ namespace esphome
             if (this->state_.hp_feed_temp != nullptr) {
                 this->state_.hp_feed_temp->add_on_state_callback([this, update_if_changed](float x) {
                     update_if_changed(this->last_hp_feed_temp_, x, [this](float new_v, float old_v) {
-                        this->on_feed_temp_change(new_v, OptimizerZone::SINGLE);
+                    
+                        auto &status = this->state_.ecodan_instance->get_status();
+                        if (this->is_dhw_active(status) || this->is_post_dhw_window(status))
+                            this->on_feed_temp_change(new_v, OptimizerZone::SINGLE);
                     });
                 });
             } 
@@ -34,7 +37,10 @@ namespace esphome
             if (this->state_.z1_feed_temp != nullptr) {
                 this->state_.z1_feed_temp->add_on_state_callback([this, update_if_changed](float x) {
                     update_if_changed(this->last_z1_feed_temp_, x, [this](float new_v, float old_v) {
-                        this->on_feed_temp_change(new_v, OptimizerZone::ZONE_1);
+
+                        auto &status = this->state_.ecodan_instance->get_status();
+                        if (this->is_dhw_active(status) || this->is_post_dhw_window(status))
+                            this->on_feed_temp_change(new_v, OptimizerZone::ZONE_1);
                     });
                 });
             } 
@@ -42,7 +48,10 @@ namespace esphome
             if (this->state_.z2_feed_temp != nullptr) {
                 this->state_.z2_feed_temp->add_on_state_callback([this, update_if_changed](float x) {
                     update_if_changed(this->last_z2_feed_temp_, x, [this](float new_v, float old_v) {
-                        this->on_feed_temp_change(new_v, OptimizerZone::ZONE_2);
+                        
+                        auto &status = this->state_.ecodan_instance->get_status();
+                        if (this->is_dhw_active(status) || this->is_post_dhw_window(status))
+                            this->on_feed_temp_change(new_v, OptimizerZone::ZONE_2);
                     });
                 });
             }
@@ -69,6 +78,84 @@ namespace esphome
                     });
                 });
             }
+        }
+
+        float Optimizer::calculate_smart_boost(int profile, float error) {
+
+            if (!this->state_.smart_boost_enabled->state) {
+                this->current_stagnation_boost_ = 1.0f;
+                this->stagnation_start_time_ = 0;
+                return 1.0f;
+            }
+
+            uint32_t initial_wait_ms;
+            uint32_t step_interval_ms;
+            float max_boost_limit;
+            float step_size;
+            
+            if (profile <= 1) { // ufh 
+                initial_wait_ms = 3600000;  // 60m
+                step_interval_ms = 1800000; // 30m
+                max_boost_limit = 1.5f;     // Max +50% 
+                step_size = 0.15f;
+            } 
+            else if (profile >= 4) { // radiator
+                initial_wait_ms = 1200000;  // 20m
+                step_interval_ms = 600000;  // 10m
+                max_boost_limit = 2.5f;     // max +250%
+                step_size = 0.20f;
+            } 
+            else { // hybbrid
+                initial_wait_ms = 2700000;  // 45m
+                step_interval_ms = 1200000; // 20m
+                max_boost_limit = 2.0f;     // max +200%  
+                step_size = 0.15f;
+            }
+
+            bool is_stagnant = (error > 0.1f) && (error >= this->last_error_ - 0.01f);            
+            float target_boost = 1.0f;
+
+            if (is_stagnant) {
+                if (this->stagnation_start_time_ == 0)
+                    this->stagnation_start_time_ = millis();
+
+                uint32_t stuck_duration = millis() - this->stagnation_start_time_;
+
+                if (stuck_duration > initial_wait_ms) {
+                    uint32_t overtime = stuck_duration - initial_wait_ms;
+                    int step_count = overtime / step_interval_ms;
+
+                    // Calculate push based on configured step_size
+                    float extra_push = (step_count + 1) * step_size;
+                    
+                    target_boost = 1.0f + extra_push;
+                    if (target_boost > max_boost_limit) 
+                        target_boost = max_boost_limit;
+                } else {
+                    target_boost = this->current_stagnation_boost_;
+                }
+                
+                this->current_stagnation_boost_ = target_boost;
+
+            } else {
+                // decay when we see change
+                this->stagnation_start_time_ = 0; 
+                
+                if (this->current_stagnation_boost_ > 1.0f) {
+                    const float UPDATE_INTERVAL_MS = 300000.0f; // 5m
+                    float decay_step = step_size * (UPDATE_INTERVAL_MS / (float)step_interval_ms);
+                    this->current_stagnation_boost_ -= decay_step;
+                    
+                    if (this->current_stagnation_boost_ < 1.0f) {
+                        this->current_stagnation_boost_ = 1.0f;
+                    }
+                } else {
+                    this->current_stagnation_boost_ = 1.0f;
+                }
+            }
+
+            this->last_error_ = error;    
+            return this->current_stagnation_boost_;
         }
 
         void Optimizer::process_adaptive_zone_(
@@ -107,7 +194,7 @@ namespace esphome
                 }
 
                 // for z2 with z1/z2 circulation pump and mixing tank, demand translate into pump being active
-                if (status.has_independent_z2() && (status.WaterPump2Active || status.WaterPump3Active))
+                if (status.has_independent_zone_temps() && (status.WaterPump2Active || status.WaterPump3Active))
                     is_heating_active = true;
             }
 
@@ -115,24 +202,22 @@ namespace esphome
             if (isnan(setpoint_bias))
                 setpoint_bias = 0.0f;
 
-            float room_temp = (i == 0) ? status.Zone1RoomTemperature : status.Zone2RoomTemperature;
-            float room_target_temp = (i == 0) ? status.Zone1SetTemperature : status.Zone2SetTemperature;
-            float requested_flow_temp = (i == 0) ? status.Zone1FlowTemperatureSetPoint : status.Zone2FlowTemperatureSetPoint;
-            float actual_flow_temp = status.has_independent_z2() ? ((i == 0) ? status.Z1FeedTemperature : status.Z2FeedTemperature) : status.HpFeedTemperature;
-            float actual_return_temp = status.has_independent_z2() ? ((i == 0) ? status.Z1ReturnTemperature : status.Z2ReturnTemperature) : status.HpReturnTemperature;
+            float room_temp = this->get_room_current_temp((i == 0) ? OptimizerZone::ZONE_1 : OptimizerZone::ZONE_2);
+            float room_target_temp = this->get_room_target_temp((i == 0) ? OptimizerZone::ZONE_1 : OptimizerZone::ZONE_2);
+            float requested_flow_temp = this->get_flow_setpoint((i == 0) ? OptimizerZone::ZONE_1 : OptimizerZone::ZONE_2);
+            float actual_flow_temp = this->get_feed_temp((i == 0) ? OptimizerZone::ZONE_1 : OptimizerZone::ZONE_2);
+            float actual_return_temp = this->get_return_temp((i == 0) ? OptimizerZone::ZONE_1 : OptimizerZone::ZONE_2);
 
             if (!is_heating_mode && !is_cooling_mode)
                 return;
 
-            if (this->state_.temperature_feedback_source->active_index().value_or(0) == 1)
-            {
-                room_temp = (i == 0) ? this->state_.temperature_feedback_z1->state : this->state_.temperature_feedback_z2->state;
-            }
             if (isnan(room_temp) || isnan(room_target_temp) || isnan(requested_flow_temp) || isnan(actual_flow_temp))
                 return;
 
-            ESP_LOGD(OPTIMIZER_TAG, "Processing Zone %d: Room=%.1f, Target=%.1f, Actual Feedtemp: %.1f, Return temp: %.1f, Outside: %.1f, Bias: %.1f, heating: %d, cooling: %d",
-                     (i + 1), room_temp, room_target_temp, actual_flow_temp, actual_return_temp, actual_outside_temp, setpoint_bias, is_heating_active, is_cooling_active);
+            auto temp_feedback_source =  (i == 0) ? this->state_.temperature_feedback_source_z1->active_index().value_or(0)
+                : this->state_.temperature_feedback_source_z2->active_index().value_or(0);
+            ESP_LOGD(OPTIMIZER_TAG, "Processing Zone %d: climate source: %d, Room=%.1f, Target=%.1f, Actual Feedtemp: %.1f, Return temp: %.1f, Outside: %.1f, Bias: %.1f, heating: %d, cooling: %d",
+                     (i + 1), temp_feedback_source, room_temp, room_target_temp, actual_flow_temp, actual_return_temp, actual_outside_temp, setpoint_bias, is_heating_active, is_cooling_active);
  
             room_target_temp += setpoint_bias;
 
@@ -145,13 +230,14 @@ namespace esphome
             float error_normalized = error_positive / max_error_range;
             float x = fmin(error_normalized, 1.0f);
             float error_factor = use_linear_error ? x : x * x * (3.0f - 2.0f * x);
+            float smart_boost = is_heating_mode ? this->calculate_smart_boost(heating_type_index, error) : 1.0f;
             
             // apply cold factor
             float dynamic_min_delta_t = base_min_delta_t + (cold_factor * (min_delta_cold_limit - base_min_delta_t));
-            float target_delta_t = dynamic_min_delta_t + error_factor * (max_delta_t - dynamic_min_delta_t);
+            float target_delta_t = dynamic_min_delta_t + error_factor * smart_boost * (max_delta_t - dynamic_min_delta_t);
 
-            ESP_LOGD(OPTIMIZER_TAG, "Effective delta T: %.2f, cold factor: %.2f, dynamic min delta T: %.2f, error factor: %.2f, linear profile: %d", 
-                target_delta_t, cold_factor, dynamic_min_delta_t, error_factor, use_linear_error);
+            ESP_LOGD(OPTIMIZER_TAG, "Effective delta T: %.2f, cold factor: %.2f, dynamic min delta T: %.2f, error factor: %.2f, smart boost: %.2f, linear profile: %d", 
+                target_delta_t, cold_factor, dynamic_min_delta_t, error_factor, smart_boost, use_linear_error);
 
             if (is_heating_mode && is_heating_active)
             {
@@ -207,24 +293,25 @@ namespace esphome
                         calculated_flow = this->round_nearest(calculated_flow);
 
                         // if there was a boost adjustment, check if it's still needed and clear if needed
-                        float short_cycle_prevention_adjustment = this->predictive_short_cycle_total_adjusted_;
-                        if (short_cycle_prevention_adjustment > 0.0f)
+                        auto optimizer_zone = (zone == esphome::ecodan::Zone::ZONE_2) ? OptimizerZone::ZONE_2 : OptimizerZone::ZONE_1;
+                        auto &mapped_pcp_adjustment_ = (zone == esphome::ecodan::Zone::ZONE_2) ? this->pcp_adjustment_z2_ : this->pcp_adjustment_z1_;
+
+                        if (mapped_pcp_adjustment_ > 0.0f)
                         {
                             ESP_LOGD(OPTIMIZER_TAG, "Z%d HEATING (boost adjustment): boost: %.1f°C, calcluated_flow: %.2f°C, actual_flow: %.2f°C",
-                                     (i + 1), short_cycle_prevention_adjustment, calculated_flow, actual_flow_temp);
+                                     (i + 1), mapped_pcp_adjustment_, calculated_flow, actual_flow_temp);
 
                             if ((actual_flow_temp - calculated_flow) >= 1.0f)
                             {
-                                calculated_flow += short_cycle_prevention_adjustment;
+                                calculated_flow += mapped_pcp_adjustment_;
                             }
                             else
                             {
-                                this->predictive_short_cycle_total_adjusted_ = 0.0f;
-                                short_cycle_prevention_adjustment = 0;
+                                mapped_pcp_adjustment_ = 0.0f;
                             }
                         }
                         ESP_LOGD(OPTIMIZER_TAG, "Z%d HEATING (Delta T): calculated_flow: %.2f°C (boost: %.1f)",
-                                 (i + 1), calculated_flow, short_cycle_prevention_adjustment);
+                                 (i + 1), calculated_flow, mapped_pcp_adjustment_);
                     }
                 }
 
@@ -232,10 +319,10 @@ namespace esphome
                     calculated_flow = this->clamp_flow_temp(calculated_flow, zone_min_flow_temp, zone_max_flow_temp);
                     // step down limit to avoid compressor halt (it seems to be triggered when delta actual_flow_temp - calculated_flow >= 2.0)
                     // we need to step down AFTER clamping, since dhw could just have finished
-                    calculated_flow = enforce_step_down(actual_flow_temp, calculated_flow);
+                    calculated_flow = enforce_step_down(status, actual_flow_temp, calculated_flow);
                 }
                 else {
-                    calculated_flow = enforce_step_down(actual_flow_temp, calculated_flow);
+                    calculated_flow = enforce_step_down(status, actual_flow_temp, calculated_flow);
                     calculated_flow = this->clamp_flow_temp(calculated_flow, zone_min_flow_temp, zone_max_flow_temp);
                 }
 
@@ -299,6 +386,24 @@ namespace esphome
             }
 
             float actual_outside_temp = status.OutsideTemperature;
+            
+            // use stored outside temp if we are within 15m from last defrost start
+            const uint32_t LOCK_DURATION_MS = 15 * 60 * 1000;
+            bool is_in_lock_window = (millis() - this->last_defrost_time_) < LOCK_DURATION_MS;
+            
+            if (!isnan(this->locked_outside_temp_)) 
+            {
+                if (status.DefrostActive || is_in_lock_window) 
+                {
+                    ESP_LOGD(OPTIMIZER_TAG, "Using locked outside temp: %.1f°C (Sensor: %.1f°C) due to recent defrost.", 
+                             this->locked_outside_temp_, status.OutsideTemperature);
+                    actual_outside_temp = this->locked_outside_temp_;
+                }
+                else 
+                {
+                    this->locked_outside_temp_ = NAN; 
+                }
+            }
 
             if (isnan(actual_outside_temp))
                 return;
@@ -339,8 +444,11 @@ namespace esphome
             float clamped_outside_temp = std::clamp(actual_outside_temp, COLD_WEATHER_TEMP, MILD_WEATHER_TEMP);
             float cold_factor = (MILD_WEATHER_TEMP - clamped_outside_temp) / (MILD_WEATHER_TEMP - COLD_WEATHER_TEMP);
 
+            // use quadratic, and expand range to 1.5
+            cold_factor *= cold_factor * 1.5f;
+
             ESP_LOGD(OPTIMIZER_TAG, "[*] Starting auto-adaptive cycle, z2 independent: %d, has_cooling: %d, cold factor: %.2f, min delta T: %.2f, max delta T: %.2f", 
-                status.has_independent_z2(), status.has_cooling(), cold_factor, base_min_delta_t, max_delta_t);
+                status.has_independent_zone_temps(), status.has_cooling(), cold_factor, base_min_delta_t, max_delta_t);
 
             float calculated_flows_heat[2] = {0.0f, 0.0f};
             float calculated_flows_cool[2] = {100.0f, 100.0f};
@@ -390,7 +498,7 @@ namespace esphome
             bool is_heating_demand = calculated_flows_heat[0] > 0.0f || calculated_flows_heat[1] > 0.0f;
             bool is_cooling_demand = calculated_flows_cool[0] < 100.0f || calculated_flows_cool[1] < 100.0f;
 
-            if (status.has_independent_z2())
+            if (status.has_independent_zone_temps())
             {
                 if (is_heating_demand)
                 {

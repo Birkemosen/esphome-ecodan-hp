@@ -71,10 +71,37 @@ This transforms your controller from a reactive system into a predictive one, en
 
 This feature predicts imminent short cycles that can occur when the home's heat demand is lower than the heat pump's minimum power output.
 
-When it detects a high-risk situation (actual flow temperature rising too far above the requested flow), it proactively applies a **+0.5°C boost**.
+When it detects a high-risk situation (actual flow temperature rising too far (>= 1.5c) above the requested flow), it proactively applies a **+0.5°C boost**. The high-risk condition is controlled by `High Delta Duration` (the minimum high-risk duration before the systems is applying the boost) and `High Delta Threshold` (the temp difference the system should monitor).
 
 * **In Auto-Adaptive Mode:** This boost is stored in the `predictive_short_cycle_total_adjusted` variable. The main `auto_adaptive_loop` sees this boost and adds it to its own calculation. The loop is also responsible for resetting the boost to 0 when the risk is gone.
 * **In Standalone Mode:** The boost is applied directly to the flow setpoint and added to the `predictive_short_cycle_total_adjusted` variable. It remains active for the entire compressor cycle and is reset by the `on_compressor_stop` script.
+
+---
+
+## Smart Boost Logic
+
+The Auto-Adaptive algorithm includes a "Smart Boost" feature designed to eliminate steady-state errors. In situations where the room temperature stabilizes slightly below the setpoint (stagnation) and fails to bridge the final gap, this logic automatically increases the calculated heat output.
+
+### How it works
+
+The system continuously monitors the temperature error (`Target` - `Current`). If the error exceeds 0.1°C and does not decrease compared to the previous measurement, the system identifies this as stagnation.
+
+After a predefined wait time (depending on the system type), a boost multiplier is applied to the calculated Delta T. If the stagnation persists, this multiplier increases in steps over time. This effectively increases the flow temperature to force the room temperature to the setpoint.
+
+**Reset Condition:**
+To prevent temperature overshoot, the boost factor is immediately reset to 1.0 (disabled) as soon as the temperature error decreases (i.e., the room temperature starts rising).
+
+### System Profiles
+
+The timing and aggressiveness of the Smart Boost logic are automatically configured based on the selected **Heating System Type**. This accounts for the significant difference in thermal mass and response time between floor heating (concrete mass) and radiators.
+
+| System Type | Initial Wait Time | Step Interval | Max Boost Limit | Behavior |
+| :--- | :--- | :--- | :--- | :--- |
+| **Floor Heating** | 60 minutes | 30 minutes | +50% (1.5x) | Conservative timing to allow for slow thermal transfer in concrete floors. |
+| **Radiators** | 20 minutes | 10 minutes | +150% (2.5x) | Faster reaction times suited for low-mass, high-temperature systems. |
+| **Hybrid/Other** | 45 minutes | 20 minutes | +100% (2.0x) | Balanced approach for mixed systems. |
+
+
 
 ---
 
@@ -107,9 +134,11 @@ This guide assumes a common scenario where an external room thermostat (like a T
 
 The Auto-Adaptive algorithm needs to know the **current temperature** being measured by your external thermostat. You must send this value back to the ESPHome controller.
 
-**If you are using a Mitsubishi wireless thermostat or [esphome-ecodan-remote-thermostat](https://github.com/gekkekoe/esphome-ecodan-remote-thermostat), you can skip the rest of this section and step 3.**
+**If you are using a Mitsubishi wireless thermostat, MRC or [esphome-ecodan-remote-thermostat](https://github.com/gekkekoe/esphome-ecodan-remote-thermostat), you can skip the rest of this section and step 3.**
 
-You can do this in two ways:
+For systems with only a MRC (and no other thermostats), you will need to add a stop condition. The heatpump will never stop otherwise. Use server control prohibit to turn off heating when setpoint has been reached.
+
+There are two options to perform **current temperature** feedback:
 
 * **Via Home Assistant UI**: Create an automation in Home Assistant that copies the temperature from your thermostat's sensor to the `number.ecodan_heatpump_temperature_feedback_z1` entity.
 * **Via REST API**: Use an external system or script to post the temperature directly.

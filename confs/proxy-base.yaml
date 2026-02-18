@@ -1,8 +1,3 @@
-substitutions:
-  uart_rx_pin: 2
-  uart_tx_pin: 1
-  uart_proxy_rx_pin: 38
-  uart_proxy_tx_pin: 39
 
 esphome:
   name: ${name}
@@ -24,7 +19,7 @@ esp32:
       CONFIG_FREERTOS_USE_TRACE_FACILITY: y
       CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS: y
       CONFIG_FREERTOS_USE_STATS_FORMATTING_FUNCTIONS: y
-  
+
 uart:
   - id: uart_ecodan
     rx_pin:
@@ -60,13 +55,13 @@ uart:
     baud_rate: 9600
     parity: EVEN
     stop_bits: 1
-    # debug:
-    #   direction: BOTH
-    #   dummy_receiver: false
-    #   after:
-    #     delimiter: "\n"
-    #   sequence:
-    #     - lambda: UARTDebug::log_hex(direction, bytes, ' ');  
+    debug:
+      direction: BOTH
+      dummy_receiver: false
+      after:
+        delimiter: "\n"
+      sequence:
+        - lambda: UARTDebug::log_hex(direction, bytes, '_');  
 
 ecodan:
   uart_id: uart_main
@@ -78,9 +73,3 @@ button:
     id: restart_button
     name: ${restart_button}
 
-sensor:
-  - platform: internal_temperature
-    name: ${internal_esp_temperature}
-    entity_category: diagnostic
-    unit_of_measurement: "°C"
-    device_class: temperature

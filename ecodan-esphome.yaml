@@ -29,10 +29,9 @@ api:
 
 # packages:
 #  base: !include confs/base.yaml # required
-#  adaptive: !include confs/auto-adaptive.yaml
 #  req: !include confs/request-codes.yaml 
 #  esp32: !include confs/esp32s3.yaml # esp32.yaml for regular board
-#  led_status: !include confs/esp32s3-led.yaml
+#  led_status: !include confs/led.yaml
 #  zone1: !include confs/zone1.yaml
 #  svc_z1: !include confs/server-control-z1.yaml
 # # disable if you don't want to use zone 2
@@ -46,10 +45,11 @@ api:
 #  energy: !include confs/energy.yaml
 #  cpu: !include confs/cpu-monitoring.yaml
 #  #svc: !include confs/server-control-z1.yaml
+#  adaptive: !include confs/auto-adaptive.yaml
 
 external_components:
   - source: github://gekkekoe/esphome-ecodan-hp@main
-    components: [ ecodan, optimizer ]
+    components: [ ecodan, optimizer, asgard_dashboard ]
     refresh: always
 
 packages:
@@ -60,10 +60,9 @@ packages:
     files: [ 
             confs/base.yaml,            # required
             confs/energy.yaml,            # required
-            confs/auto-adaptive.yaml,    # recommended
             confs/cpu-monitoring.yaml,    # recommended
             confs/request-codes.yaml,   # disable if your unit does not support request codes (service menu)
-            ## Uncomment ONE of the following based on your hardware setup:
+            confs/auto-adaptive.yaml,    # recommended, define before board def
             confs/esp32s3.yaml,         # confs/esp32.yaml, for regular board
             #confs/esp32s3-led.yaml,    # atom s3 status leds
             #confs/esp32s3-proxy.yaml,  # esp32s3 proxy configuration
@@ -92,7 +91,7 @@ packages:
             # confs/ecodan-labels-pl.yaml,  # Polish
             confs/debug.yaml,
             confs/wifi.yaml,
-
+            confs/led.yaml,
            ]
 
 logger:

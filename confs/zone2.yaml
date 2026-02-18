@@ -1,7 +1,7 @@
 substitutions:
   zone_identifier_z1: "2"
-  # z2 conditional callback assignment link
-  z2_feed_assignment: "state.z2_feed_temp = id(z2_feed_temp);"
+  z2_cpp_prefix: ""
+  z2_enabled: true
 
 binary_sensor:
   - platform: ecodan
@@ -73,22 +73,6 @@ sensor:
     status_mixing_valve:
       id: status_mixing_valve
       name: ${status_mixing_valve}
-
-    status_heating_cooling_z2:
-      id: status_heating_cooling_z2
-      name: H/C status z2
-      internal: true
-      on_value:
-        if:
-          condition:
-            - lambda: |-
-                auto mode = static_cast<uint8_t>(id(ecodan_instance).get_status().HeatingCoolingModeZone2);
-                auto index = id(heatpump_select_operating_mode_z2).active_index();
-                return (index.has_value() && index.value() != mode);
-          then:
-            - select.set_index:
-                id: heatpump_select_operating_mode_z2
-                index: !lambda "return static_cast<uint8_t>(id(ecodan_instance).get_status().HeatingCoolingModeZone2);"
 
 select:
   - platform: template
